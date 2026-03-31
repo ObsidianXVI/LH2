@@ -1,0 +1,26 @@
+name: lh2_app
+description: LH2 Lighthouse Hyperpanel - Flutter Web App
+publish_to: 'none'
+version: 0.0.1
+
+environment:
+  sdk: ^3.6.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Local LH2 stub package
+  lh2_stub:
+    path: ../lh2_stub
+
+  # Routing
+  go_router: ^14.6.3
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: false
