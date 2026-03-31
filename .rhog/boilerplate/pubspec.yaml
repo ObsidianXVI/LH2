@@ -1,0 +1,7 @@
+  lh2_stub:
+    path: ../lh2_stub
+  firebase_core: ^4.5.0
+  cloud_firestore: ^6.1.3
+  firebase_auth: ^6.2.0
+  firebase_ui_auth: ^3.0.1
+  vs_node_view: ^2.1.1
