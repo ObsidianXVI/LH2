@@ -1,4 +1,4 @@
-Task 6.2-3: Workspace persistence repository
+Task 6.3.1-1: Improve `GenericCache` to be type-safe + TTL + invalidation [L3]
 
 ---
 
@@ -12,36 +12,18 @@ DO NOT modify `system_prompt.md` or `PLAN.md`
 
 Your job is to implement without breaking existing functionality, the specified task:
 
-##### Task 6.2-3: Workspace persistence repository (Firestore) [L4]
+##### Task 6.3.1-1: Improve `GenericCache` to be type-safe + TTL + invalidation [L3]
 
-- Deliverable:
-  - WorkspaceRepository that reads/writes workspace state using the schema in Appendix A.
-  - Snapshot listeners for workspace and active tab state.
-- Prompt:
 ```text
-Prompt (L4):
+Prompt (L3):
 
-Implement the Firestore-backed WorkspaceRepository for LH2.
+Refactor/extend `.rhog/skills/caching.dart` GenericCache to support:
+- Type-safe caching of Firestore-loaded models (LH2Object subtypes).
+- Optional TTL per entry.
+- Manual invalidation (invalidate(id), invalidateAll())
+- initAll should correctly store T, not QueryDocumentSnapshot.
 
-Use the exact schema specified in Appendix A (workspaces root collection + subcollections).
-
-Implement these APIs (names required):
-- class WorkspaceRepository {
-    Stream<WorkspaceMeta> watchWorkspaceMeta(String workspaceId);
-    Future<WorkspaceMeta> getWorkspaceMeta(String workspaceId);
-    Future<void> upsertWorkspaceMeta(String workspaceId, WorkspaceMeta meta);
-
-    Stream<WorkspaceTab> watchTab(String workspaceId, String tabId);
-    Future<WorkspaceTab> getTab(String workspaceId, String tabId);
-    Future<String> createTab(String workspaceId, WorkspaceTabDraft draft);
-    Future<void> updateTab(String workspaceId, String tabId, WorkspaceTabPatch patch);
-    Future<void> deleteTab(String workspaceId, String tabId);
-
-    Stream<List<NodeTemplate>> watchNodeTemplates(String workspaceId, ObjectType type);
-    Future<void> upsertNodeTemplate(String workspaceId, NodeTemplate template);
-  }
-
-Also:
-- Add schemaVersion fields + a migration hook (no migrations needed yet; just scaffolding).
-- Implement debounced save for high-frequency writes (viewport pan/zoom).
+Provide:
+- Updated GenericCache<T> implementation.
+- Unit tests for cache hit/miss, TTL expiry, and invalidate().
 ```
