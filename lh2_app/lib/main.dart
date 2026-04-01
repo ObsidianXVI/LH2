@@ -14,6 +14,7 @@ import 'data/workspace_repository.dart';
 
 import 'app/theme.dart';
 import 'ui/theme/tokens.dart';
+import 'app/responsive.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -193,6 +194,42 @@ class _LH2HomePageState extends ConsumerState<LH2HomePage> {
                       ),
                     ),
                     SizedBox(height: LH2Theme.spacing(2)),
+                    // Responsive demo
+                    if (LH2Breakpoints.isSmallDesktop(context))
+                      Padding(
+                        padding: EdgeInsets.all(LH2Theme.spacing(2)),
+                        child: Card(
+                          color: LH2Colors.panel,
+                          child: Padding(
+                            padding: EdgeInsets.all(LH2Theme.spacing(2)),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('Small Desktop Demo', style: LH2Theme.tabLabel),
+                                Text(
+                                  'Query overlay: ${context.queryOverlayWidth.toStringAsFixed(0)}px',
+                                  style: LH2Theme.body,
+                                ),
+                                Text(
+                                  'Canvas min: ${context.canvasMinSize.width}x${context.canvasMinSize.height}px',
+                                  style: LH2Theme.body,
+                                ),
+                                SizedBox(
+                                  width: context.crosshairPanelWidth,
+                                  child: Card(
+                                    color: LH2Colors.selectionBlue.withOpacity(0.1),
+                                    child: Padding(
+                                      padding: EdgeInsets.all(LH2Theme.spacing(1)),
+                                      child: Text('Mock Crosshair Panel', style: LH2Theme.body),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+
                     // DI status indicator
                     _DiStatusWidget(api: api, workspaceRepo: workspaceRepo),
                   ],

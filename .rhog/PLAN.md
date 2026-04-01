@@ -364,6 +364,8 @@ Implement:
 
 ##### Task 5.2-1: Extract color tokens from Figma (manual first, automate later) [L2]
 
+*DONE*
+
 ```text
 Prompt (L2):
 
