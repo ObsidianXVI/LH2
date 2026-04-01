@@ -56,6 +56,8 @@ These appendices define concrete data shapes and APIs that tasks below must foll
 
 ##### Task 7.1-1: Scaffold Flutter web app + wire `lh2_stub` + disable browser context menu [L2]
 
+*DONE*
+
 - Deliverable:
   - Flutter web app skeleton that boots into `LH2App`.
   - Imports/uses `lh2_stub` types and `LH2API` (from `lh2_stub/lib/api/*`).
@@ -78,6 +80,8 @@ Output:
 ```
 
 ##### Task 7.1-2: Riverpod DI composition root [L4]
+
+*DONE*
 
 - Deliverable:
   - Riverpod provider graph for app singletons: `FirebaseApp`, `FirebaseFirestore`, `FirebaseAuth` (even if auth flow is stubbed), `FirestoreDBInterface`, `LH2API`, caches, workspace repository.

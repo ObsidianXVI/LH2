@@ -2,29 +2,42 @@ Task 7.1-1: Scaffold Flutter web app
 
 ---
 
-I am developing a web app for personal use. It will be build using the Flutter framework (Dart language) for the Web platform. I am planning to use Firebase for the backend, and have the emulators downloaded for debugging/dev purposes. The project has been planned in `.rhog/PLAN.md`, based on the `FEATURES.md` file. The `.rhog` subdirectory contains reference images (in `/mockups`), boilerplate code (in `/boilerplate`), and useful information (in `/skills`).
+I am developing a web app for personal use. It will be build using the Flutter framework (Dart language) for the Web platform. I am planning to use Firebase for the backend, and have the emulators downloaded for debugging/dev purposes. The project has been planned in `.rhog/PLAN.md`, based on the `FEATURES.md` file. The `.rhog` subdirectory contains reference images (in `/mockups`), boilerplate code (in `/boilerplate`), and useful information (in `/skills`). You have access to Flutter and Chrome devtools for debugging, inspection, loggin, profiling, etc.
+
+Use `flutter run -d web-server --web-hostname localhost --web-port 8080` to run the web server initially.
+
+You have access to the Chrome browser instance, so navigate to `localhost:8080` to access the app. Refresh to show the latest changes for future code changes.
 
 Your job is to implement without breaking existing functionality, the specified task:
 
-## Task 7.1-1: Scaffold Flutter web app + wire `lh2_stub` + disable browser context menu [L2]
+##### Task 7.1-2: Riverpod DI composition root [L4]
 
 - Deliverable:
-  - Flutter web app skeleton that boots into `LH2App`.
-  - Imports/uses `lh2_stub` types and `LH2API` (from `lh2_stub/lib/api/*`).
-  - Disables browser context menu on right-click.
+  - Riverpod provider graph for app singletons: `FirebaseApp`, `FirebaseFirestore`, `FirebaseAuth` (even if auth flow is stubbed), `FirestoreDBInterface`, `LH2API`, caches, workspace repository.
+  - Clear layering: UI → application/services → data.
 - Prompt:
 ```text
-Prompt:
+Prompt (L4):
 
-Goal: Create the LH2 Flutter Web app skeleton.
+Implement the LH2 dependency injection and layering using Riverpod.
 
-Requirements:
-1) Create a Flutter web app (desktop-first) that boots into a root widget `LH2App`.
-2) Add local path dependency on `lh2_stub/` and import `lh2_stub` types (`LH2Object`, `Project`, etc.) and `LH2API`.
-3) Disable the browser context menu for right-click on web (so the app can use right-click menus).
-4) Add a minimal routing/shell structure but keep everything in a single view for now.
+Constraints:
+- Flutter Web.
+- Keep layering clear:
+  - data/: FirestoreDBInterface, repositories
+  - domain/: operations, models (lh2_stub types), controller state
+  - ui/: widgets
 
-Output:
-- File changes for the Flutter app.
-- Notes on how right-click context menu is disabled on Flutter Web.
+Implement providers (names are required):
+- firebaseAppProvider: FutureProvider<FirebaseApp>
+- firestoreProvider: Provider<FirebaseFirestore>
+- authProvider: Provider<FirebaseAuth>
+- dbProvider: Provider<FirestoreDBInterface>
+- lh2ApiProvider: Provider<LH2API>
+- workspaceRepoProvider: Provider<WorkspaceRepository>
+- caches: Provider<GenericCache<T>> for each LH2Object type (or a typed wrapper)
+
+Include:
+- A single file that acts as the composition root (e.g. lib/app/providers.dart).
+- Example usage from UI to read LH2API and workspace repo.
 ```
