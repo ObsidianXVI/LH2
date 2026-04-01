@@ -1,4 +1,4 @@
-Task 6.2-1: Firebase init + emulator wiring
+Task 6.2-2: Implement FirestoreDBInterface using `.rhog/boilerplate/db_interface.dart` root collections
 
 ---
 
@@ -10,20 +10,21 @@ You have access to the Chrome browser instance, so navigate to `localhost:8080` 
 
 Your job is to implement without breaking existing functionality, the specified task:
 
-##### Task 6.2-1: Firebase init + emulator wiring [L2]
+##### Task 6.2-2: Implement FirestoreDBInterface using `.rhog/boilerplate/db_interface.dart` root collections [L3]
 
 ```text
-Prompt (L2):
+Prompt (L3):
 
-Wire Firebase Core/Auth/Firestore for Flutter Web.
+Implement FirestoreDBInterface CRUD exactly following `.rhog/boilerplate/db_interface.dart`.
 
 Requirements:
-- Firebase project id: lh2-db
-- Config stored in secrets/.env (do not commit)
-- Use Firestore + Auth emulators in debug builds.
+- Root collections only:
+  - projectGroups, projects, deliverables, tasks, sessions, contextRequirements, events, actualContexts
+- Use create via set() on auto-id doc.
+- Use updateObject via update().
+- JSON conversion uses lh2_stub/lib/types.dart toJson/fromJson.
 
-Provide:
-- Initialization code (main.dart)
-- Emulator host/port config
-- Simple smoke check that can read a known collection.
+Add:
+- Unit tests for JSON round-trip of each LH2Object.
+- Integration tests using Firestore emulator for create/get/update/delete for each LH2Object.
 ```

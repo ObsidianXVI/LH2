@@ -223,6 +223,8 @@ This UID will be stored on workspace documents (Appendix A), but domain collecti
 
 ##### Task 6.2-1: Firebase init + emulator wiring [L2]
 
+*DONE*
+
 ```text
 Prompt (L2):
 
