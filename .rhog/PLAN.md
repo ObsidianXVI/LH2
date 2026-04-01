@@ -117,6 +117,8 @@ Include:
 
 ##### Task 7.2-1: Operation framework (IDs, error model, throw vs recover) [L4]
 
+*DONE*
+
 - Deliverable:
   - A lightweight operations layer used by UI; UI should not directly call Firestore.
   - Operation IDs follow `api.<area>.<action>` (aligned with `lh2_stub` `APIOperation` style).

@@ -1,0 +1,265 @@
+/// Canvas operations for LH2.
+///
+/// Operations:
+///   - api.canvas.addItem
+///   - api.canvas.updateViewport
+library;
+
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lh2_stub/lh2_stub.dart';
+
+import '../../app/providers.dart';
+import '../../data/workspace_repository.dart';
+import 'core.dart';
+
+typedef JSON = Map<String, Object?>;
+
+// ============================================================================
+// api.canvas.addItem
+// ============================================================================
+
+/// Input for [CanvasAddItemOp].
+class CanvasAddItemInput {
+  final String workspaceId;
+  final String tabId;
+  final String itemType; // 'node' | 'widget'
+  final ObjectType? objectType; // for nodes
+  final String? objectId; // for nodes with existing objects
+  final String? templateId; // for node rendering
+  final JSON? widgetConfig; // for widgets
+  final JSON worldRect; // {x, y, w, h}
+
+  const CanvasAddItemInput({
+    required this.workspaceId,
+    required this.tabId,
+    required this.itemType,
+    this.objectType,
+    this.objectId,
+    this.templateId,
+    this.widgetConfig,
+    required this.worldRect,
+  });
+
+  Map<String, Object?> toJson() => {
+        'workspaceId': workspaceId,
+        'tabId': tabId,
+        'itemType': itemType,
+        if (objectType != null) 'objectType': objectType!.name,
+        if (objectId != null) 'objectId': objectId,
+        if (templateId != null) 'templateId': templateId,
+        if (widgetConfig != null) 'widgetConfig': widgetConfig,
+        'worldRect': worldRect,
+      };
+}
+
+/// Output for [CanvasAddItemOp].
+class CanvasAddItemOutput {
+  final String itemId;
+
+  const CanvasAddItemOutput({required this.itemId});
+
+  Map<String, Object?> toJson() => {'itemId': itemId};
+}
+
+/// Adds a new item (node or widget) to the canvas.
+///
+/// Operation ID: api.canvas.addItem
+class CanvasAddItemOp extends LH2Operation<CanvasAddItemInput, CanvasAddItemOutput> {
+  final WorkspaceRepository _repo;
+
+  CanvasAddItemOp(this._repo);
+
+  @override
+  String get operationId => 'api.canvas.addItem';
+
+  @override
+  Future<LH2OpResult<CanvasAddItemOutput>> run(CanvasAddItemInput input) async {
+    try {
+      // Validate input
+      if (input.workspaceId.isEmpty || input.tabId.isEmpty) {
+        return LH2OpResult.error(
+          createError(
+            errorCode: LH2ErrorCodes.invalidInput,
+            message: 'workspaceId and tabId are required',
+            payload: input.toJson(),
+            isFatal: false,
+          ),
+        );
+      }
+
+      if (!['node', 'widget'].contains(input.itemType)) {
+        return LH2OpResult.error(
+          createError(
+            errorCode: LH2ErrorCodes.invalidInput,
+            message: 'itemType must be "node" or "widget"',
+            payload: input.toJson(),
+            isFatal: false,
+          ),
+        );
+      }
+
+      if (input.itemType == 'node' && input.objectType == null) {
+        return LH2OpResult.error(
+          createError(
+            errorCode: LH2ErrorCodes.invalidInput,
+            message: 'objectType is required for nodes',
+            payload: input.toJson(),
+            isFatal: false,
+          ),
+        );
+      }
+
+      // Generate item ID
+      final itemId = '${input.itemType}_${DateTime.now().millisecondsSinceEpoch}_${_randomSuffix()}';
+
+      // Build item data
+      final itemData = <String, Object?>{
+        'schemaVersion': 1,
+        'itemId': itemId,
+        'itemType': input.itemType,
+        'worldRect': input.worldRect,
+        'snap': {'startSnapped': false, 'endSnapped': false},
+        if (input.objectType != null) 'objectType': input.objectType!.name,
+        if (input.objectId != null) 'objectId': input.objectId,
+        if (input.templateId != null) 'templateId': input.templateId,
+        if (input.widgetConfig != null) 'widgetConfig': input.widgetConfig,
+      };
+
+      // Get current tab to merge items
+      final currentTab = await _repo.getTab(input.workspaceId, input.tabId);
+
+      // Update with new item
+      final updatedItems = Map<String, Object?>.from(currentTab.items);
+      updatedItems[itemId] = itemData;
+
+      await _repo.updateTab(
+        input.workspaceId,
+        input.tabId,
+        WorkspaceTabPatch(items: updatedItems),
+      );
+
+      return LH2OpResult.ok(CanvasAddItemOutput(itemId: itemId));
+    } catch (e) {
+      return LH2OpResult.error(
+        createError(
+          errorCode: LH2ErrorCodes.databaseError,
+          message: 'Failed to add canvas item: ${e.toString()}',
+          payload: input.toJson(),
+          cause: e,
+          isFatal: true,
+        ),
+      );
+    }
+  }
+
+  String _randomSuffix() {
+    return '${DateTime.now().microsecond % 1000}';
+  }
+}
+
+/// Provider for [CanvasAddItemOp].
+final canvasAddItemOpProvider = Provider<CanvasAddItemOp>((ref) {
+  final repo = ref.watch(workspaceRepoProvider);
+  return CanvasAddItemOp(repo);
+});
+
+// ============================================================================
+// api.canvas.updateViewport
+// ============================================================================
+
+/// Input for [CanvasUpdateViewportOp].
+class CanvasUpdateViewportInput {
+  final String workspaceId;
+  final String tabId;
+  final double panX;
+  final double panY;
+  final double zoom;
+
+  const CanvasUpdateViewportInput({
+    required this.workspaceId,
+    required this.tabId,
+    required this.panX,
+    required this.panY,
+    required this.zoom,
+  });
+
+  Map<String, Object?> toJson() => {
+        'workspaceId': workspaceId,
+        'tabId': tabId,
+        'panX': panX,
+        'panY': panY,
+        'zoom': zoom,
+      };
+}
+
+/// Output for [CanvasUpdateViewportOp].
+class CanvasUpdateViewportOutput {
+  final bool success;
+
+  const CanvasUpdateViewportOutput({required this.success});
+
+  Map<String, Object?> toJson() => {'success': success};
+}
+
+/// Updates the canvas viewport (pan/zoom).
+///
+/// This is a high-frequency operation that should be debounced by the caller.
+///
+/// Operation ID: api.canvas.updateViewport
+class CanvasUpdateViewportOp
+    extends LH2Operation<CanvasUpdateViewportInput, CanvasUpdateViewportOutput> {
+  final WorkspaceRepository _repo;
+
+  CanvasUpdateViewportOp(this._repo);
+
+  @override
+  String get operationId => 'api.canvas.updateViewport';
+
+  @override
+  Future<LH2OpResult<CanvasUpdateViewportOutput>> run(
+    CanvasUpdateViewportInput input,
+  ) async {
+    try {
+      // Validate zoom bounds
+      const minZoom = 0.1;
+      const maxZoom = 5.0;
+      final clampedZoom = input.zoom.clamp(minZoom, maxZoom);
+
+      // Get current tab to preserve existing controller data
+      final currentTab = await _repo.getTab(input.workspaceId, input.tabId);
+
+      // Merge viewport update into existing controller
+      final updatedController = Map<String, Object?>.from(currentTab.controller);
+      updatedController['viewport'] = {
+        'panX': input.panX,
+        'panY': input.panY,
+        'zoom': clampedZoom,
+      };
+
+      await _repo.updateTab(
+        input.workspaceId,
+        input.tabId,
+        WorkspaceTabPatch(controller: updatedController),
+      );
+
+      return LH2OpResult.ok(const CanvasUpdateViewportOutput(success: true));
+    } catch (e) {
+      // Non-fatal: viewport updates can fail silently
+      return LH2OpResult.error(
+        createError(
+          errorCode: LH2ErrorCodes.databaseError,
+          message: 'Failed to update viewport: ${e.toString()}',
+          payload: input.toJson(),
+          cause: e,
+          isFatal: false,
+        ),
+      );
+    }
+  }
+}
+
+/// Provider for [CanvasUpdateViewportOp].
+final canvasUpdateViewportOpProvider = Provider<CanvasUpdateViewportOp>((ref) {
+  final repo = ref.watch(workspaceRepoProvider);
+  return CanvasUpdateViewportOp(repo);
+});
