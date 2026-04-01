@@ -324,6 +324,8 @@ Provide:
 
 ##### Task 6.3.2-1: Key strategy guidelines + utility helpers [L2]
 
+*DONE*
+
 ```text
 Prompt (L2):
 

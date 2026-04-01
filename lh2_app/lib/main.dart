@@ -12,6 +12,8 @@ import 'context_menu_web.dart'
 import 'app/providers.dart';
 import 'data/workspace_repository.dart';
 
+import 'app/theme.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -42,13 +44,7 @@ class LH2App extends ConsumerWidget {
     return MaterialApp(
       title: 'LH2 Lighthouse Hyperpanel',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF2196F3),
-          brightness: Brightness.dark,
-        ),
-        useMaterial3: true,
-      ),
+      theme: LH2Theme.materialTheme,
       home: firebaseAsync.when(
         loading: () => const _SplashScreen(),
         error: (err, _) => _ErrorScreen(error: err),

@@ -1,4 +1,4 @@
-Task 6.3.2-1: Key strategy guidelines + utility helpers [L2]
+Task 5.1-1: Theme baseline + Menlo everywhere 
 
 ---
 
@@ -12,15 +12,21 @@ DO NOT modify `system_prompt.md` or `PLAN.md`
 
 Your job is to implement without breaking existing functionality, the specified task:
 
-##### Task 6.3.2-1: Key strategy guidelines + utility helpers [L2]
+##### Task 5.1-1: Theme baseline + Menlo everywhere [L2]
 
 ```text
 Prompt (L2):
 
-Add a small set of guidelines and utility helpers for using Keys in LH2 to reduce rebuilds.
+Create the LH2 baseline theme:
+- Use Menlo font family globally.
+- Provide a `LH2Theme` wrapper with:
+  - colors (placeholder values for now)
+  - spacing scale (8px base)
+  - text styles for tab labels, node titles, body
 
-Include:
-- When to use ValueKey(objectId), ObjectKey(model), and GlobalKey.
-- A helper like `Key canvasItemKey(CanvasItem item)`.
-- Example usage in a node list builder.
+Implement:
+- ThemeData extension or InheritedWidget
+- Ensure all Text uses Menlo via defaultTextStyle/theme
+
+Let me know if you cant visually accesss the Chrome browser to see the results.
 ```
