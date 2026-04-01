@@ -35,9 +35,9 @@ class LH2App extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Watch Firebase initialisation.  While loading, show a splash; on error,
+    // Watch Firebase + emulator initialisation.  While loading, show a splash; on error,
     // show a simple error screen.
-    final firebaseAsync = ref.watch(firebaseAppProvider);
+    final firebaseAsync = ref.watch(firebaseEmulatorProvider);
 
     return MaterialApp(
       title: 'LH2 Lighthouse Hyperpanel',

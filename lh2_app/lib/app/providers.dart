@@ -15,6 +15,8 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lh2_app/options.dart';
 import 'package:lh2_stub/lh2_stub.dart';
+import 'package:flutter/foundation.dart' show kDebugMode;
+import '../domain/models/current_user.dart';
 
 import '../data/cache.dart';
 import '../data/firestore_db_interface.dart';
@@ -34,6 +36,14 @@ final firebaseAppProvider = FutureProvider<FirebaseApp>((ref) async {
   return Firebase.initializeApp(options: webOptions);
 });
 
+final firebaseEmulatorProvider = FutureProvider<void>((ref) async {
+  await ref.read(firebaseAppProvider.future);
+  if (kDebugMode) {
+    FirebaseFirestore.instance.useFirestoreEmulator('localhost', 8080);
+    FirebaseAuth.instance.useAuthEmulator('localhost', 9099);
+  }
+});
+
 // ============================================================================
 // 2. Firebase service singletons
 // ============================================================================
@@ -42,6 +52,7 @@ final firebaseAppProvider = FutureProvider<FirebaseApp>((ref) async {
 ///
 /// Throws if [firebaseAppProvider] has not yet resolved.
 final firestoreProvider = Provider<FirebaseFirestore>((ref) {
+  ref.watch(firebaseEmulatorProvider);
   // Ensure Firebase is initialised before accessing Firestore.
   ref.watch(firebaseAppProvider).maybeWhen(
         data: (_) => null,
@@ -57,6 +68,7 @@ final firestoreProvider = Provider<FirebaseFirestore>((ref) {
 ///
 /// Auth flows are stubbed for now (Task 6.1-1 will add sign-in logic).
 final authProvider = Provider<FirebaseAuth>((ref) {
+  ref.watch(firebaseEmulatorProvider);
   ref.watch(firebaseAppProvider).maybeWhen(
         data: (_) => null,
         orElse: () => throw StateError(
@@ -65,6 +77,22 @@ final authProvider = Provider<FirebaseAuth>((ref) {
         ),
       );
   return FirebaseAuth.instance;
+});
+
+final currentUserProvider = FutureProvider.autoDispose<CurrentUser>((ref) async {
+  final auth = ref.read(authProvider);
+  User? user = auth.currentUser;
+  if (user == null) {
+    final result = await auth.signInAnonymously();
+    user = result.user;
+    if (user == null) {
+      throw FirebaseAuthException(
+        code: 'anonymous-signin-failed',
+        message: 'Anonymous sign-in failed',
+      );
+    }
+  }
+  return CurrentUser(user.uid);
 });
 
 // ============================================================================

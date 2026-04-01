@@ -1,4 +1,4 @@
-Task 7.3-1: Telemetry logger (console JSON)
+Task 6.1-1: Minimal auth bootstrap (no auth flows)
 
 ---
 
@@ -10,30 +10,27 @@ You have access to the Chrome browser instance, so navigate to `localhost:8080` 
 
 Your job is to implement without breaking existing functionality, the specified task:
 
-##### Task 7.3-1: Telemetry logger (console JSON) [L3]
+##### Task 6.1-1: Minimal auth bootstrap (no auth flows) [L3]
+
 
 - Deliverable:
-  - Console-only JSON telemetry logs with: error message, operation id, payload, code location.
+  - A “current user” concept used for workspace ownership, without building UI auth flows.
+  - Supports emulator.
 - Prompt:
 ```text
 Prompt (L3):
 
-Implement LH2 telemetry instrumentation (FEATURES.md §7.3.1).
+Implement a minimal auth bootstrap for LH2 without UI auth flows.
 
 Requirements:
-- Log JSON to console only.
-- For any LH2OpError, produce a JSON object with:
-  - ts (epoch millis)
-  - level ("error"|"warn")
-  - message
-  - operationId
-  - errorCode
-  - payload (JSON)
-  - location (string like "lib/.../file.dart:Class.method")
+- App can run without user interaction to sign in.
+- For local dev, use one of:
+  - Anonymous sign-in, OR
+  - Hardcoded UID in secrets/.env
 
 Implement:
-- class Telemetry { void error(LH2OpError e); void warn(...); }
-- helper `String captureLocation(StackTrace st, {int maxFrames = 8})`
+- class CurrentUser { String uid; }
+- currentUserProvider: FutureProvider<CurrentUser>
 
-Ensure logging is used by the operation framework (Appendix G).
+This UID will be stored on workspace documents (Appendix A), but domain collections remain root collections.
 ```
