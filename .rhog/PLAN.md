@@ -304,6 +304,8 @@ Also:
 
 ##### Task 6.3.1-1: Improve `GenericCache` to be type-safe + TTL + invalidation [L3]
 
+*DONE*
+
 ```text
 Prompt (L3):
 

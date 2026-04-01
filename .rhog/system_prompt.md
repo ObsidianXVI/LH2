@@ -1,4 +1,4 @@
-Task 6.3.1-1: Improve `GenericCache` to be type-safe + TTL + invalidation [L3]
+Task 6.3.2-1: Key strategy guidelines + utility helpers [L2]
 
 ---
 
@@ -12,18 +12,15 @@ DO NOT modify `system_prompt.md` or `PLAN.md`
 
 Your job is to implement without breaking existing functionality, the specified task:
 
-##### Task 6.3.1-1: Improve `GenericCache` to be type-safe + TTL + invalidation [L3]
+##### Task 6.3.2-1: Key strategy guidelines + utility helpers [L2]
 
 ```text
-Prompt (L3):
+Prompt (L2):
 
-Refactor/extend `.rhog/skills/caching.dart` GenericCache to support:
-- Type-safe caching of Firestore-loaded models (LH2Object subtypes).
-- Optional TTL per entry.
-- Manual invalidation (invalidate(id), invalidateAll())
-- initAll should correctly store T, not QueryDocumentSnapshot.
+Add a small set of guidelines and utility helpers for using Keys in LH2 to reduce rebuilds.
 
-Provide:
-- Updated GenericCache<T> implementation.
-- Unit tests for cache hit/miss, TTL expiry, and invalidate().
+Include:
+- When to use ValueKey(objectId), ObjectKey(model), and GlobalKey.
+- A helper like `Key canvasItemKey(CanvasItem item)`.
+- Example usage in a node list builder.
 ```
