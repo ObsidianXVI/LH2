@@ -194,6 +194,9 @@ Ensure logging is used by the operation framework (Appendix G).
 
 ##### Task 6.1-1: Minimal auth bootstrap (no auth flows) [L3]
 
+*DONE*
+
+
 - Deliverable:
   - A “current user” concept used for workspace ownership, without building UI auth flows.
   - Supports emulator.

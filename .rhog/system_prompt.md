@@ -1,4 +1,4 @@
-Task 6.1-1: Minimal auth bootstrap (no auth flows)
+Task 6.2-1: Firebase init + emulator wiring
 
 ---
 
@@ -10,27 +10,20 @@ You have access to the Chrome browser instance, so navigate to `localhost:8080` 
 
 Your job is to implement without breaking existing functionality, the specified task:
 
-##### Task 6.1-1: Minimal auth bootstrap (no auth flows) [L3]
+##### Task 6.2-1: Firebase init + emulator wiring [L2]
 
-
-- Deliverable:
-  - A “current user” concept used for workspace ownership, without building UI auth flows.
-  - Supports emulator.
-- Prompt:
 ```text
-Prompt (L3):
+Prompt (L2):
 
-Implement a minimal auth bootstrap for LH2 without UI auth flows.
+Wire Firebase Core/Auth/Firestore for Flutter Web.
 
 Requirements:
-- App can run without user interaction to sign in.
-- For local dev, use one of:
-  - Anonymous sign-in, OR
-  - Hardcoded UID in secrets/.env
+- Firebase project id: lh2-db
+- Config stored in secrets/.env (do not commit)
+- Use Firestore + Auth emulators in debug builds.
 
-Implement:
-- class CurrentUser { String uid; }
-- currentUserProvider: FutureProvider<CurrentUser>
-
-This UID will be stored on workspace documents (Appendix A), but domain collections remain root collections.
+Provide:
+- Initialization code (main.dart)
+- Emulator host/port config
+- Simple smoke check that can read a known collection.
 ```
