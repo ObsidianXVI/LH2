@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lh2_app/domain/operations/core.dart';
 
 import 'providers.dart';
 import 'theme.dart';
 import '../ui/theme/tokens.dart';
+import '../domain/notifiers/workspace_controller.dart';
 
 /// Hyperpanel Scaffold with hover-reveal tab bar (FEATURES.md §1.1.1).
 class HyperpanelScaffold extends ConsumerWidget {
@@ -12,17 +14,85 @@ class HyperpanelScaffold extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final activeTabId = ref.watch(activeTabIdProvider);
-    final tabs = ref.watch(tabListProvider);
+    final workspaceState = ref.watch(workspaceControllerProvider);
+    final activeTabId = workspaceState.activeTabId;
+    final tabs = workspaceState.tabs.map((t) => (t.tabId, t.tab.title)).toList();
     final hovered = ref.watch(tabBarHoveredProvider);
+
+    void showCreateTabMenu() {
+      final RenderBox? overlay =
+          Overlay.of(context).context.findRenderObject() as RenderBox?;
+      if (overlay == null) return;
+
+      final position = RelativeRect.fromLTRB(
+        100, // left position near the tab bar
+        40, // below the tab bar
+        overlay.size.width - 100,
+        overlay.size.height,
+      );
+
+      showMenu<String>(
+        context: context,
+        position: position,
+        items: [
+          const PopupMenuItem(
+            value: 'flow',
+            child: Row(
+              children: [
+                Text('⧉', style: TextStyle(fontSize: 16)), // Unicode flow icon
+                SizedBox(width: 8),
+                Text('Flow Canvas'),
+              ],
+            ),
+          ),
+          const PopupMenuItem(
+            value: 'calendar',
+            child: Row(
+              children: [
+                Text('◫',
+                    style: TextStyle(fontSize: 16)), // Unicode calendar icon
+                SizedBox(width: 8),
+                Text('Calendar Canvas'),
+              ],
+            ),
+          ),
+        ],
+      ).then((kind) async {
+        if (kind != null) {
+          final controller = ref.read(workspaceControllerProvider.notifier);
+
+          // Now create the tab
+          try {
+            await controller.createTab(
+              kind == 'flow' ? CanvasKind.flow : CanvasKind.calendar,
+            );
+          } catch (e) {
+            if (context.mounted) {
+              String msg = e.toString();
+              if (e is LH2OpError) msg = e.message;
+
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Failed to create tab: $msg'),
+                  backgroundColor: Colors.red,
+                  duration: const Duration(seconds: 5),
+                ),
+              );
+            }
+          }
+        }
+      });
+    }
 
     return Scaffold(
       body: Column(
         children: [
           /// Hover-reveal tab bar (fixed height, no content shift).
           MouseRegion(
-            onEnter: (_) => ref.read(tabBarHoveredProvider.notifier).state = true,
-            onExit: (_) => ref.read(tabBarHoveredProvider.notifier).state = false,
+            onEnter: (_) =>
+                ref.read(tabBarHoveredProvider.notifier).state = true,
+            onExit: (_) =>
+                ref.read(tabBarHoveredProvider.notifier).state = false,
             child: Container(
               height: 40.0,
               color: LH2Colors.panel,
@@ -30,7 +100,9 @@ class HyperpanelScaffold extends ConsumerWidget {
                 tabs: tabs.map((t) => TabMeta(id: t.$1, title: t.$2)).toList(),
                 activeTabId: activeTabId,
                 hovered: hovered,
-                onSelect: (id) => ref.read(activeTabIdProvider.notifier).state = id,
+                onSelect: (id) =>
+                    ref.read(workspaceControllerProvider.notifier).setActiveTab(id),
+                onCreateTab: showCreateTabMenu,
               ),
             ),
           ),
@@ -42,19 +114,21 @@ class HyperpanelScaffold extends ConsumerWidget {
 }
 
 /// Tab bar widget (VS Code-like hover reveal).
-/// When not hovered: only active tab visible (centered).
-/// When hovered: all tabs visible in a row.
+/// When not hovered: only active tab visible.
+/// When hovered: all tabs visible plus "+" button for creating new tabs.
 class DocumentTabBar extends StatelessWidget {
   final List<TabMeta> tabs;
   final String? activeTabId;
   final bool hovered;
   final void Function(String) onSelect;
+  final VoidCallback onCreateTab;
   const DocumentTabBar({
     super.key,
     required this.tabs,
     this.activeTabId,
     required this.hovered,
     required this.onSelect,
+    required this.onCreateTab,
   });
 
   @override
@@ -74,6 +148,22 @@ class DocumentTabBar extends StatelessWidget {
                   onTap: tab.id == activeTabId
                       ? () {} // No-op for active tab
                       : () => onSelect(tab.id),
+                ),
+              ),
+            ),
+          // "+" button to create new tab (visible when hovered)
+          if (hovered)
+            InkWell(
+              onTap: onCreateTab,
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                child: const Text(
+                  '+',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
                 ),
               ),
             ),

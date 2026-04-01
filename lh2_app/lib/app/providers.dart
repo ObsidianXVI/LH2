@@ -40,8 +40,12 @@ final firebaseAppProvider = FutureProvider<FirebaseApp>((ref) async {
 final firebaseEmulatorProvider = FutureProvider<void>((ref) async {
   await ref.read(firebaseAppProvider.future);
   if (kDebugMode) {
-    FirebaseFirestore.instance.useFirestoreEmulator('localhost', 8080);
-    FirebaseAuth.instance.useAuthEmulator('localhost', 9099);
+    try {
+      FirebaseFirestore.instance.useFirestoreEmulator('localhost', 8081);
+      FirebaseAuth.instance.useAuthEmulator('localhost', 9099);
+    } catch (e) {
+      // ignore if already initialized
+    }
   }
 });
 
@@ -218,8 +222,11 @@ final tabListProvider = Provider<List<TabInfo>>((ref) => const [
       ('calendar1', 'Calendar 1'),
     ]);
 
-/// Active tab ID.
-final activeTabIdProvider = StateProvider<String?>((ref) => 'flow1');
-
 /// Tab bar hover state.
 final tabBarHoveredProvider = StateProvider<bool>((ref) => false);
+
+/// Workspace ID derived from current user UID.
+final workspaceIdProvider = FutureProvider<String>((ref) async {
+  final user = await ref.watch(currentUserProvider.future);
+  return user.uid;
+});

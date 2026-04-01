@@ -29,6 +29,19 @@ class Telemetry {
   /// - payload
   /// - location
   static void error(LH2OpError e) {
+    // Treat non-fatal errors as warnings.
+    // This avoids noisy "error" logs for recoverable states like
+    // "workspace not found" on first boot.
+    if (!e.isFatal) {
+      warn(
+        e.operationId,
+        e.message,
+        payload: {'errorCode': e.errorCode, ...e.payload},
+        stackTrace: StackTrace.current,
+      );
+      return;
+    }
+
     final logEntry = <String, Object?>{
       'ts': DateTime.now().millisecondsSinceEpoch,
       'level': 'error',

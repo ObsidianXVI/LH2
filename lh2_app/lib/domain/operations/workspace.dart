@@ -62,7 +62,9 @@ class WorkspaceLoadOp extends LH2Operation<WorkspaceLoadInput, WorkspaceLoadOutp
   String get operationId => 'api.workspace.load';
 
   @override
-  Future<LH2OpResult<WorkspaceLoadOutput>> execute(WorkspaceLoadInput input) async {
+  Future<LH2OpResult<WorkspaceLoadOutput>> execute(
+    WorkspaceLoadInput input,
+  ) async {
     try {
       if (input.workspaceId.isEmpty) {
         return LH2OpResult.error(
@@ -76,7 +78,21 @@ class WorkspaceLoadOp extends LH2Operation<WorkspaceLoadInput, WorkspaceLoadOutp
       }
 
       // Load workspace metadata
-      final meta = await _repo.getWorkspaceMeta(input.workspaceId);
+      WorkspaceMeta meta;
+      try {
+        meta = await _repo.getWorkspaceMeta(input.workspaceId);
+      } catch (e) {
+        // If meta not found, return NOT_FOUND error so controller can init
+        return LH2OpResult.error(
+          createError(
+            errorCode: LH2ErrorCodes.notFound,
+            message: 'Workspace ${input.workspaceId} not found',
+            payload: input.toJson(),
+            cause: e,
+            isFatal: false,
+          ),
+        );
+      }
 
       // Load all tabs
       final tabOrder = meta.tabOrder;
@@ -223,17 +239,34 @@ class WorkspaceSaveOp extends LH2Operation<WorkspaceSaveInput, WorkspaceSaveOutp
 
       // Save tabs if provided
       if (input.tabs != null) {
+        final currentMeta = await _repo.getWorkspaceMeta(input.workspaceId).catchError((_) => WorkspaceMeta(schemaVersion: 1, ownerUid: 'system', tabOrder: []));
+        final newTabOrder = List<String>.from(currentMeta.tabOrder);
+
         for (final entry in input.tabs!) {
           if (entry.draft != null) {
             // Create new tab
             final newId = await _repo.createTab(input.workspaceId, entry.draft!);
             createdTabIds.add(newId);
+            newTabOrder.add(newId);
             tabsSaved++;
           } else if (entry.tabId != null && entry.patch != null) {
             // Update existing tab
             await _repo.updateTab(input.workspaceId, entry.tabId!, entry.patch!);
             tabsSaved++;
           }
+        }
+
+        // Update tab order if any new tabs were created
+        if (createdTabIds.isNotEmpty) {
+          await _repo.upsertWorkspaceMeta(
+            input.workspaceId,
+            WorkspaceMeta(
+              schemaVersion: currentMeta.schemaVersion,
+              ownerUid: currentMeta.ownerUid,
+              activeTabId: currentMeta.activeTabId ?? createdTabIds.first,
+              tabOrder: newTabOrder,
+            ),
+          );
         }
       }
 

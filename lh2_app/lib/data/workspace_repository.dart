@@ -213,7 +213,10 @@ class WorkspaceRepository {
 
   Future<WorkspaceMeta> getWorkspaceMeta(String workspaceId) async {
     final snap = await _workspaceDoc(workspaceId).get();
-    final data = snap.data() ?? {};
+    if (!snap.exists) {
+      throw StateError('Workspace $workspaceId not found');
+    }
+    final data = snap.data()!;
     final meta = WorkspaceMeta.fromJson(data);
     _assertSchemaVersion(meta.schemaVersion, snap.reference.path);
     return meta;

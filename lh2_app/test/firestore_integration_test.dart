@@ -1,7 +1,7 @@
 /// Integration tests using Firestore emulator for create/get/update/delete.
 ///
 /// Run with: flutter test test/firestore_integration_test.dart
-/// Requires Firestore emulator running on localhost:8080.
+/// Requires Firestore emulator running on localhost:8081.
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -18,7 +18,7 @@ void main() {
 
     // Connect to emulator
     firestore = FirebaseFirestore.instance;
-    firestore.useFirestoreEmulator('localhost', 8080);
+    firestore.useFirestoreEmulator('localhost', 8081);
     firestore.settings = const Settings(
       persistenceEnabled: false,
       sslEnabled: false,

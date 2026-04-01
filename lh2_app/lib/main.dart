@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lh2_app/domain/notifiers/workspace_controller.dart';
 import 'package:lh2_stub/lh2_stub.dart' as lh2;
 
 // Web-specific imports for disabling context menu
@@ -67,7 +68,16 @@ class _SplashScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const Scaffold(
-      body: Center(child: CircularProgressIndicator()),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 16),
+            Text('Initializing LH2...'),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -108,6 +118,12 @@ class _LH2HomePageState extends ConsumerState<LH2HomePage> {
   @override
   void initState() {
     super.initState();
+
+    // Trigger initial workspace load using current user UID
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final wsId = await ref.read(workspaceIdProvider.future);
+      await ref.read(workspaceControllerProvider.notifier).loadWorkspace(wsId);
+    });
 
     // Initialize with some demo objects to verify lh2_stub imports work
     _objects.addAll([
@@ -180,7 +196,8 @@ class _LH2HomePageState extends ConsumerState<LH2HomePage> {
                     SizedBox(height: LH2Theme.spacing(3)),
                     // Demo: Show object types
                     ..._objects.map((obj) => Padding(
-                          padding: EdgeInsets.symmetric(vertical: LH2Theme.spacing(0.5)),
+                          padding: EdgeInsets.symmetric(
+                              vertical: LH2Theme.spacing(0.5)),
                           child: Text(
                             '- ${obj.runtimeType}: ${obj.toJson()['name']}',
                             style: LH2Theme.body.copyWith(fontSize: 12),
@@ -206,7 +223,8 @@ class _LH2HomePageState extends ConsumerState<LH2HomePage> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text('Small Desktop Demo', style: LH2Theme.tabLabel),
+                                Text('Small Desktop Demo',
+                                    style: LH2Theme.tabLabel),
                                 Text(
                                   'Query overlay: ${context.queryOverlayWidth.toStringAsFixed(0)}px',
                                   style: LH2Theme.body,
@@ -218,10 +236,13 @@ class _LH2HomePageState extends ConsumerState<LH2HomePage> {
                                 SizedBox(
                                   width: context.crosshairPanelWidth,
                                   child: Card(
-                                    color: LH2Colors.selectionBlue.withOpacity(0.1),
+                                    color: LH2Colors.selectionBlue
+                                        .withOpacity(0.1),
                                     child: Padding(
-                                      padding: EdgeInsets.all(LH2Theme.spacing(1)),
-                                      child: Text('Mock Crosshair Panel', style: LH2Theme.body),
+                                      padding:
+                                          EdgeInsets.all(LH2Theme.spacing(1)),
+                                      child: Text('Mock Crosshair Panel',
+                                          style: LH2Theme.body),
                                     ),
                                   ),
                                 ),

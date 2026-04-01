@@ -414,6 +414,8 @@ Deliverables:
 
 ###### Task 1.1.1-1: Tab bar UI (hidden-on-hover, active label always visible) [L2]
 
+*DONE*
+
 ```text
 Prompt (L2):
 

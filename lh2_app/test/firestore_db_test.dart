@@ -1,4 +1,4 @@
-import 'package:test/test.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:lh2_stub/lh2_stub.dart';
@@ -8,8 +8,9 @@ void main() {
   late FirestoreDBInterface db;
 
   setUpAll(() async {
+    TestWidgetsFlutterBinding.ensureInitialized();
     await Firebase.initializeApp();
-    FirebaseFirestore.instance.useFirestoreEmulator('localhost', 8080);
+    FirebaseFirestore.instance.useFirestoreEmulator('localhost', 8081);
     db = FirestoreDBInterface(FirebaseFirestore.instance);
   });
 

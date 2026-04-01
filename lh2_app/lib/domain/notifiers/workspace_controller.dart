@@ -7,10 +7,21 @@ library;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lh2_stub/lh2_stub.dart';
 
+import '../../app/providers.dart';
 import '../../data/workspace_repository.dart';
 import '../operations/canvas.dart';
 import '../operations/core.dart';
 import '../operations/workspace.dart';
+
+/// Canvas kind for workspace tabs.
+///
+/// Stored in Firestore as `flow` or `calendar`.
+enum CanvasKind {
+  flow,
+  calendar;
+
+  String get firestoreValue => name;
+}
 
 /// Workspace state managed by [WorkspaceController].
 class WorkspaceState {
@@ -79,12 +90,19 @@ class WorkspaceController extends Notifier<WorkspaceState> {
   }
 
   /// Loads workspace data using api.workspace.load operation.
-  Future<void> loadWorkspace(String workspaceId) async {
+  ///
+  /// Returns true if successful, false otherwise.
+  Future<bool> loadWorkspace(String workspaceId) async {
     state = state.copyWith(isLoading: true, lastError: null);
 
     final loadOp = ref.read(workspaceLoadOpProvider);
-    final result =
-        await loadOp.run(WorkspaceLoadInput(workspaceId: workspaceId));
+    var result = await loadOp.run(WorkspaceLoadInput(workspaceId: workspaceId));
+
+    // If not found, try to initialize it
+    if (!result.ok && result.error?.errorCode == LH2ErrorCodes.notFound) {
+      await _initializeNewWorkspace(workspaceId);
+      result = await loadOp.run(WorkspaceLoadInput(workspaceId: workspaceId));
+    }
 
     if (result.ok) {
       final output = result.value!;
@@ -95,6 +113,7 @@ class WorkspaceController extends Notifier<WorkspaceState> {
         activeTabId: output.meta.activeTabId ?? output.tabs.firstOrNull?.tabId,
         isLoading: false,
       );
+      return true;
     } else {
       state = state.copyWith(
         isLoading: false,
@@ -102,41 +121,116 @@ class WorkspaceController extends Notifier<WorkspaceState> {
       );
 
       // Log error for telemetry
-      _logError(result.error!);
+      if (result.error != null) _logError(result.error!);
+      return false;
     }
+  }
+
+  /// Internal helper to create a brand new workspace with default tabs.
+  Future<void> _initializeNewWorkspace(String workspaceId) async {
+    final saveOp = ref.read(workspaceSaveOpProvider);
+
+    // Ensure the workspace meta doc exists first.
+    // This prevents "Workspace <id> not found" during initial boot.
+    final currentUser = await ref.read(currentUserProvider.future);
+    await runOrThrow(
+      saveOp,
+      WorkspaceSaveInput(
+        workspaceId: workspaceId,
+        meta: WorkspaceMeta(
+          schemaVersion: 1,
+          ownerUid: currentUser.uid,
+          activeTabId: null,
+          tabOrder: const [],
+        ),
+      ),
+    );
+
+    // 2. Set workspaceId in state BEFORE creating tabs to avoid recursion
+    state = state.copyWith(workspaceId: workspaceId);
+
+    // 3. Create default tabs
+    await createTab(CanvasKind.flow, makeActive: true);
+    await createTab(CanvasKind.calendar);
   }
 
   /// Creates a new tab using api.workspace.save operation.
   ///
   /// Uses [runOrThrow] to propagate fatal errors.
-  Future<String> createTab(String kind) async {
-    final saveOp = ref.read(workspaceSaveOpProvider);
+  Future<String> createTab(
+    CanvasKind kind, {
+    bool makeActive = true,
+  }) async {
+    final workspaceId = state.workspaceId;
+    if (workspaceId.isEmpty) {
+      throw LH2OpError(
+        operationId: 'api.workspace.createTab',
+        errorCode: LH2ErrorCodes.preconditionFailed,
+        message: 'No workspace loaded; cannot create tab.',
+        payload: {'kind': kind.firestoreValue},
+        isFatal: true,
+      );
+    }
 
-    final draft = WorkspaceTabDraft(
-      kind: kind,
-      title: kind == 'flow'
-          ? 'Flow ${state.tabs.length + 1}'
-          : 'Calendar ${state.tabs.length + 1}',
-      controller: {
-        'kind': kind,
-        'viewport': {'panX': 0.0, 'panY': 0.0, 'zoom': 1.0},
-        if (kind == 'flow') 'gridSizePx': 24,
-      },
-    );
+    final repo = ref.read(workspaceRepoProvider);
 
-    // Use runOrThrow to throw on fatal errors
-    final output = await runOrThrow(
-      saveOp,
-      WorkspaceSaveInput(
-        workspaceId: state.workspaceId,
-        tabs: [WorkspaceTabSaveEntry.newTab(draft)],
+    // Determine next tab number by kind.
+    final existingCount =
+        state.tabs.where((t) => t.tab.kind == kind.firestoreValue).length;
+    final title = switch (kind) {
+      CanvasKind.flow => 'Flow ${existingCount + 1}',
+      CanvasKind.calendar => 'Calendar ${existingCount + 1}',
+    };
+
+    final controller = <String, Object?>{
+      'kind': kind.firestoreValue,
+      'viewport': {'panX': 0.0, 'panY': 0.0, 'zoom': 1.0},
+      if (kind == CanvasKind.flow) 'gridSizePx': 24,
+      // Calendar defaults (Appendix B/C) can be expanded later.
+    };
+
+    final tabId = await repo.createTab(
+      workspaceId,
+      WorkspaceTabDraft(
+        kind: kind.firestoreValue,
+        title: title,
+        controller: controller,
       ),
     );
 
-    // Reload workspace to get new tab
-    await loadWorkspace(state.workspaceId);
+    // Update meta: append tabOrder + optionally set activeTabId.
+    final meta = state.meta ?? await repo.getWorkspaceMeta(workspaceId);
+    final newTabOrder = [...meta.tabOrder, tabId].cast<String>();
+    await repo.upsertWorkspaceMeta(
+      workspaceId,
+      WorkspaceMeta(
+        schemaVersion: meta.schemaVersion,
+        ownerUid: meta.ownerUid,
+        activeTabId: makeActive ? tabId : (meta.activeTabId ?? tabId),
+        tabOrder: newTabOrder,
+      ),
+    );
 
-    return output.createdTabIds.first;
+    // Optimistically update UI state so the tab appears immediately
+    // (Firestore will converge via the next load).
+    final newEntry = WorkspaceTabEntry(
+      tabId: tabId,
+      tab: WorkspaceTab(
+        schemaVersion: 1,
+        kind: kind.firestoreValue,
+        title: title,
+        controller: controller,
+        items: const {},
+        links: const {},
+      ),
+    );
+
+    state = state.copyWith(
+      tabs: [...state.tabs, newEntry],
+      activeTabId: makeActive ? tabId : state.activeTabId,
+    );
+
+    return tabId;
   }
 
   /// Updates the active tab's viewport using api.canvas.updateViewport.
@@ -241,7 +335,7 @@ final workspaceControllerProvider =
 );
 
 /// Provider for the current workspace state (convenience).
-/// 
+///
 /// Usage: Watch this provider to get the current workspace state.
 /// Call loadWorkspace on the controller to initialize with a workspaceId.
 final currentWorkspaceStateProvider = Provider<WorkspaceState>((ref) {

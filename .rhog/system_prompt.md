@@ -1,4 +1,4 @@
-Task 1.1.1-1: Tab bar UI (hidden-on-hover, active label always visible)
+Task 1.1.2-1: Create tab via right-click menu (Flow vs Calendar)
 
 ---
 
@@ -12,24 +12,21 @@ DO NOT modify `system_prompt.md` or `PLAN.md`
 
 Your job is to implement without breaking existing functionality, the specified task:
 
-###### Task 1.1.1-1: Tab bar UI (hidden-on-hover, active label always visible) [L2]
+###### Task 1.1.2-1: Create tab via right-click menu (Flow vs Calendar) [L2]
 
 ```text
 Prompt (L2):
 
-Implement the LH2 tab bar UI per FEATURES.md §1.1.1.
+Implement tab creation per FEATURES.md §1.1.2.
 
 Requirements:
-- Tab bar is usually hidden: only the active tab’s name is visible.
-- When mouse enters the tab bar area, reveal full tab strip (like VS Code).
-- Clicking a tab activates it.
+- "Create new tab" triggers a context menu asking: Flow Canvas or Calendar Canvas.
+- On selection, create a tab persisted to Firestore workspace (Appendix A):
+  - kind = flow|calendar
+  - default title (e.g. "Flow 1", "Calendar 1")
+  - default controller state (Appendix B)
 
-Implement widgets:
-- HyperpanelScaffold
-- DocumentTabBar (name required)
-  - inputs: List<TabMeta>, activeTabId, onSelect(tabId)
-  - hover reveal animation (e.g. AnimatedContainer height)
-
-State:
-- Use Riverpod: activeTabIdProvider, tabListProvider.
+Implement:
+- WorkspaceController (Riverpod Notifier) with method `createTab(CanvasKind kind)`
+- Use WorkspaceRepository.createTab()
 ```
