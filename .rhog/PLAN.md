@@ -343,6 +343,8 @@ Include:
 
 ##### Task 5.1-1: Theme baseline + Menlo everywhere [L2]
 
+*DONE*
+
 ```text
 Prompt (L2):
 

@@ -1,15 +1,19 @@
 import 'package:flutter/material.dart';
 
+import '../ui/theme/tokens.dart';
+
 /// LH2 baseline theme with Menlo font globally, spacing scale, and text styles.
 class LH2Theme {
   /// Base spacing unit: 8px.
   static const double baseSpacingPx = 8.0;
 
   /// Spacing scale.
-  static double spacing(int level) => baseSpacingPx * level.clamp(0, 12);
+  static double spacing(double level) =>
+      (baseSpacingPx * level).clamp(0.0, 96.0);
 
   /// Font family for all text: Menlo (monospace).
-  static const String fontFamily = 'Menlo, Monaco, Consolas, "Courier New", monospace';
+  static const String fontFamily =
+      'Menlo, Monaco, Consolas, "Courier New", monospace';
 
   /// Tab labels.
   static const TextStyle tabLabel = TextStyle(
@@ -38,39 +42,37 @@ class LH2Theme {
   ///
   /// Placeholder colors; update later from Figma tokens.
   static ThemeData get materialTheme => ThemeData(
-    /// Menlo globally.
-    fontFamily: fontFamily,
+        /// Menlo globally.
+        fontFamily: fontFamily,
 
-    /// Dark mode baseline.
-    colorScheme: ColorScheme.fromSeed(
-      seedColor: const Color(0xFF2196F3), // LH2 blue
-      brightness: Brightness.dark,
-      primary: const Color(0xFF2196F3),
-      secondary: const Color(0xFF4CAF50),
-      surface: const Color(0xFF121212),
-      background: const Color(0xFF0D0D0D),
-      onPrimary: Colors.white,
-      onSecondary: Colors.white,
-      onSurface: const Color(0xFFBDBDBD),
-      onBackground: const Color(0xFFBDBDBD),
-    ),
+        /// Dark mode using LH2Colors tokens.
+        colorScheme: ColorScheme.dark(
+          primary: LH2Colors.accentBlue,
+          onPrimary: Colors.white,
+          secondary: LH2Colors.successGreen,
+          onSecondary: Colors.black87,
+          surface: LH2Colors.panel,
+          onSurface: LH2Colors.textPrimary,
+          background: LH2Colors.background,
+          onBackground: LH2Colors.textSecondary,
+          surfaceVariant: LH2Colors.border,
+          onSurfaceVariant: LH2Colors.textSecondary,
+          outline: LH2Colors.border,
+        ),
 
-    /// Spacing via MediaQuery? Use LH2Theme.spacing() in widgets.
-    useMaterial3: true,
+        /// Spacing via LH2Theme.spacing().
+        useMaterial3: true,
 
-    /// Text styles inherit fontFamily.
-    textTheme: const TextTheme(
-      displayLarge: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
-      headlineMedium: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
-      bodyLarge: TextStyle(fontSize: 14),
-      bodyMedium: TextStyle(fontSize: 13),
-      labelLarge: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-    ).apply(
-      fontFamily: fontFamily,
-      bodyColor: const Color(0xFFBDBDBD),
-      displayColor: Colors.white,
-    ),
+        /// Text styles with tokens.
+        textTheme: TextTheme(
+          displayLarge:
+              nodeTitle.copyWith(fontSize: 32, fontWeight: FontWeight.bold),
+          headlineMedium: nodeTitle.copyWith(fontSize: 20),
+          bodyLarge: body.copyWith(fontSize: 14),
+          bodyMedium: body,
+          labelLarge: tabLabel.copyWith(fontSize: 14),
+        ),
 
-    /// Custom extensions can be added later.
-  );
+        /// Custom extensions later.
+      );
 }

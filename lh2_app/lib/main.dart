@@ -13,6 +13,7 @@ import 'app/providers.dart';
 import 'data/workspace_repository.dart';
 
 import 'app/theme.dart';
+import 'ui/theme/tokens.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -135,24 +136,22 @@ class _LH2HomePageState extends ConsumerState<LH2HomePage> {
           // Top bar
           Container(
             height: 48,
-            color: Theme.of(context).colorScheme.surfaceContainerHighest,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            color: LH2Colors.panel,
+            padding: EdgeInsets.symmetric(horizontal: LH2Theme.spacing(2)),
             child: Row(
               children: [
                 Text(
                   'LH2',
-                  style: TextStyle(
+                  style: LH2Theme.nodeTitle.copyWith(
                     fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.onSurface,
+                    color: LH2Colors.textPrimary,
                   ),
                 ),
                 const Spacer(),
                 Text(
                   'Lighthouse Hyperpanel',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  style: LH2Theme.tabLabel.copyWith(
+                    color: LH2Colors.textSecondary,
                   ),
                 ),
               ],
@@ -162,38 +161,38 @@ class _LH2HomePageState extends ConsumerState<LH2HomePage> {
           // Main content area
           Expanded(
             child: Container(
-              color: Theme.of(context).colorScheme.surface,
+              color: LH2Colors.background,
               child: Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
                       'LH2 App Loaded Successfully',
-                      style: Theme.of(context).textTheme.headlineSmall,
+                      style: LH2Theme.nodeTitle.copyWith(fontSize: 20),
                     ),
-                    const SizedBox(height: 16),
+                    SizedBox(height: LH2Theme.spacing(2)),
                     Text(
                       'Imported ${_objects.length} LH2 objects from lh2_stub',
-                      style: Theme.of(context).textTheme.bodyMedium,
+                      style: LH2Theme.body,
                     ),
-                    const SizedBox(height: 24),
+                    SizedBox(height: LH2Theme.spacing(3)),
                     // Demo: Show object types
                     ..._objects.map((obj) => Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 4),
+                          padding: EdgeInsets.symmetric(vertical: LH2Theme.spacing(0.5)),
                           child: Text(
                             '- ${obj.runtimeType}: ${obj.toJson()['name']}',
-                            style: Theme.of(context).textTheme.bodySmall,
+                            style: LH2Theme.body.copyWith(fontSize: 12),
                           ),
                         )),
-                    const SizedBox(height: 32),
+                    SizedBox(height: LH2Theme.spacing(4)),
                     Text(
                       'Right-click context menu is disabled on web',
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.primary,
+                      style: LH2Theme.body.copyWith(
+                        color: LH2Colors.accentBlue,
                         fontStyle: FontStyle.italic,
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    SizedBox(height: LH2Theme.spacing(2)),
                     // DI status indicator
                     _DiStatusWidget(api: api, workspaceRepo: workspaceRepo),
                   ],
@@ -225,28 +224,26 @@ class _DiStatusWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: EdgeInsets.all(LH2Theme.spacing(1.5)),
       decoration: BoxDecoration(
-        border: Border.all(
-          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.4),
-        ),
-        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: LH2Colors.border.withOpacity(0.4)),
+        borderRadius: BorderRadius.circular(LH2Theme.spacing(1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             'DI Graph — provider instances',
-            style: Theme.of(context).textTheme.labelMedium,
+            style: LH2Theme.tabLabel.copyWith(fontSize: 12),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: LH2Theme.spacing(1)),
           Text(
             '✓ LH2API: ${api.runtimeType}',
-            style: Theme.of(context).textTheme.bodySmall,
+            style: LH2Theme.body.copyWith(fontSize: 12),
           ),
           Text(
             '✓ WorkspaceRepository: ${workspaceRepo.runtimeType}',
-            style: Theme.of(context).textTheme.bodySmall,
+            style: LH2Theme.body.copyWith(fontSize: 12),
           ),
         ],
       ),
