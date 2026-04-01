@@ -1,4 +1,4 @@
-Task 6.2-2: Implement FirestoreDBInterface using `.rhog/boilerplate/db_interface.dart` root collections
+Task 6.2-3: Workspace persistence repository
 
 ---
 
@@ -8,23 +8,41 @@ Use `flutter run -d web-server --web-hostname localhost --web-port 8080` to run 
 
 You have access to the Chrome browser instance, so navigate to `localhost:8080` to access the app. Refresh to show the latest changes for future code changes.
 
+DO NOT modify `system_prompt.md` or `PLAN.md`
+
 Your job is to implement without breaking existing functionality, the specified task:
 
-##### Task 6.2-2: Implement FirestoreDBInterface using `.rhog/boilerplate/db_interface.dart` root collections [L3]
+##### Task 6.2-3: Workspace persistence repository (Firestore) [L4]
 
+
+- Deliverable:
+  - WorkspaceRepository that reads/writes workspace state using the schema in Appendix A.
+  - Snapshot listeners for workspace and active tab state.
+- Prompt:
 ```text
-Prompt (L3):
+Prompt (L4):
 
-Implement FirestoreDBInterface CRUD exactly following `.rhog/boilerplate/db_interface.dart`.
+Implement the Firestore-backed WorkspaceRepository for LH2.
 
-Requirements:
-- Root collections only:
-  - projectGroups, projects, deliverables, tasks, sessions, contextRequirements, events, actualContexts
-- Use create via set() on auto-id doc.
-- Use updateObject via update().
-- JSON conversion uses lh2_stub/lib/types.dart toJson/fromJson.
+Use the exact schema specified in Appendix A (workspaces root collection + subcollections).
 
-Add:
-- Unit tests for JSON round-trip of each LH2Object.
-- Integration tests using Firestore emulator for create/get/update/delete for each LH2Object.
+Implement these APIs (names required):
+- class WorkspaceRepository {
+    Stream<WorkspaceMeta> watchWorkspaceMeta(String workspaceId);
+    Future<WorkspaceMeta> getWorkspaceMeta(String workspaceId);
+    Future<void> upsertWorkspaceMeta(String workspaceId, WorkspaceMeta meta);
+
+    Stream<WorkspaceTab> watchTab(String workspaceId, String tabId);
+    Future<WorkspaceTab> getTab(String workspaceId, String tabId);
+    Future<String> createTab(String workspaceId, WorkspaceTabDraft draft);
+    Future<void> updateTab(String workspaceId, String tabId, WorkspaceTabPatch patch);
+    Future<void> deleteTab(String workspaceId, String tabId);
+
+    Stream<List<NodeTemplate>> watchNodeTemplates(String workspaceId, ObjectType type);
+    Future<void> upsertNodeTemplate(String workspaceId, NodeTemplate template);
+  }
+
+Also:
+- Add schemaVersion fields + a migration hook (no migrations needed yet; just scaffolding).
+- Implement debounced save for high-frequency writes (viewport pan/zoom).
 ```

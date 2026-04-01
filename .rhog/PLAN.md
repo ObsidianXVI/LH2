@@ -243,6 +243,8 @@ Provide:
 
 ##### Task 6.2-2: Implement FirestoreDBInterface using `.rhog/boilerplate/db_interface.dart` root collections [L3]
 
+*DONE*
+
 ```text
 Prompt (L3):
 
