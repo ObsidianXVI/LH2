@@ -15,6 +15,7 @@ import 'data/workspace_repository.dart';
 import 'app/theme.dart';
 import 'ui/theme/tokens.dart';
 import 'app/responsive.dart';
+import 'app/hyperpanel_scaffold.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -131,8 +132,8 @@ class _LH2HomePageState extends ConsumerState<LH2HomePage> {
     final api = ref.watch(lh2ApiProvider);
     final workspaceRepo = ref.watch(workspaceRepoProvider);
 
-    return Scaffold(
-      body: Column(
+    return HyperpanelScaffold(
+      child: Column(
         children: [
           // Top bar
           Container(

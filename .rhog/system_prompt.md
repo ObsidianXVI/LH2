@@ -1,4 +1,4 @@
-Task 5.3-1: Implement desktop responsiveness utilities (Appendix F) [L2]
+Task 1.1.1-1: Tab bar UI (hidden-on-hover, active label always visible)
 
 ---
 
@@ -12,17 +12,24 @@ DO NOT modify `system_prompt.md` or `PLAN.md`
 
 Your job is to implement without breaking existing functionality, the specified task:
 
-##### Task 5.3-1: Implement desktop responsiveness utilities (Appendix F) [L2]
+###### Task 1.1.1-1: Tab bar UI (hidden-on-hover, active label always visible) [L2]
 
 ```text
 Prompt (L2):
 
-Implement the responsiveness strategy for LH2 (desktop-only) exactly as specified in Appendix F.
+Implement the LH2 tab bar UI per FEATURES.md §1.1.1.
 
-Deliverables:
-- LH2Breakpoints
-- Layout constraint helpers for:
-  - Query overlay width clamping
-  - Canvas min size
-  - Crosshair side panel width
+Requirements:
+- Tab bar is usually hidden: only the active tab’s name is visible.
+- When mouse enters the tab bar area, reveal full tab strip (like VS Code).
+- Clicking a tab activates it.
+
+Implement widgets:
+- HyperpanelScaffold
+- DocumentTabBar (name required)
+  - inputs: List<TabMeta>, activeTabId, onSelect(tabId)
+  - hover reveal animation (e.g. AnimatedContainer height)
+
+State:
+- Use Riverpod: activeTabIdProvider, tabListProvider.
 ```

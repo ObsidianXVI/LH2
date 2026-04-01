@@ -13,6 +13,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:lh2_app/options.dart';
 import 'package:lh2_stub/lh2_stub.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
@@ -79,7 +80,8 @@ final authProvider = Provider<FirebaseAuth>((ref) {
   return FirebaseAuth.instance;
 });
 
-final currentUserProvider = FutureProvider.autoDispose<CurrentUser>((ref) async {
+final currentUserProvider =
+    FutureProvider.autoDispose<CurrentUser>((ref) async {
   final auth = ref.read(authProvider);
   User? user = auth.currentUser;
   if (user == null) {
@@ -208,3 +210,16 @@ final actualContextCacheProvider = Provider<GenericCache<ActualContext>>((ref) {
     defaultTtl: _defaultCacheTtl,
   );
 });
+
+/// Demo tab list for tab bar (Task 1.1.1).
+typedef TabInfo = (String id, String title);
+final tabListProvider = Provider<List<TabInfo>>((ref) => const [
+      ('flow1', 'Flow 1'),
+      ('calendar1', 'Calendar 1'),
+    ]);
+
+/// Active tab ID.
+final activeTabIdProvider = StateProvider<String?>((ref) => 'flow1');
+
+/// Tab bar hover state.
+final tabBarHoveredProvider = StateProvider<bool>((ref) => false);
