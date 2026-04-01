@@ -14,7 +14,6 @@ Your job is to implement without breaking existing functionality, the specified 
 
 ##### Task 6.2-3: Workspace persistence repository (Firestore) [L4]
 
-
 - Deliverable:
   - WorkspaceRepository that reads/writes workspace state using the schema in Appendix A.
   - Snapshot listeners for workspace and active tab state.

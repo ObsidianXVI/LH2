@@ -264,6 +264,8 @@ Add:
 
 ##### Task 6.2-3: Workspace persistence repository (Firestore) [L4]
 
+*DONE*
+
 - Deliverable:
   - WorkspaceRepository that reads/writes workspace state using the schema in Appendix A.
   - Snapshot listeners for workspace and active tab state.
