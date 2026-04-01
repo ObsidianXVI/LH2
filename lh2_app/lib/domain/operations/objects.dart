@@ -84,7 +84,7 @@ class ObjectsGetOp extends LH2Operation<ObjectsGetInput, ObjectsGetOutput> {
   String get operationId => 'api.objects.get';
 
   @override
-  Future<LH2OpResult<ObjectsGetOutput>> run(ObjectsGetInput input) async {
+  Future<LH2OpResult<ObjectsGetOutput>> execute(ObjectsGetInput input) async {
     try {
       if (input.objectId.isEmpty) {
         return LH2OpResult.error(
@@ -236,7 +236,7 @@ class ObjectsUpdateOp extends LH2Operation<ObjectsUpdateInput, ObjectsUpdateOutp
   String get operationId => 'api.objects.update';
 
   @override
-  Future<LH2OpResult<ObjectsUpdateOutput>> run(ObjectsUpdateInput input) async {
+  Future<LH2OpResult<ObjectsUpdateOutput>> execute(ObjectsUpdateInput input) async {
     try {
       if (input.objectId.isEmpty) {
         return LH2OpResult.error(

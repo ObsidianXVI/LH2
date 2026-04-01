@@ -6,6 +6,8 @@ library;
 
 import 'dart:convert';
 
+import 'telemetry.dart';
+
 /// Error model for LH2 operations.
 ///
 /// Captures all relevant error context including operation ID, error code,
@@ -118,7 +120,8 @@ class LH2OpResult<T> {
   }
 
   @override
-  String toString() => ok ? 'LH2OpResult.ok($value)' : 'LH2OpResult.error($error)';
+  String toString() =>
+      ok ? 'LH2OpResult.ok($value)' : 'LH2OpResult.error($error)';
 }
 
 /// Base class for all LH2 operations.
@@ -133,22 +136,35 @@ abstract class LH2Operation<In, Out> {
   ///
   /// Returns an `LH2OpResult` containing either the output value
   /// or an `LH2OpError` with full context.
-  Future<LH2OpResult<Out>> run(In input);
+  /// 
+  /// Errors are automatically logged to telemetry.
+  Future<LH2OpResult<Out>> run(In input) async {
+    final result = await execute(input);
+    
+    // Log any errors to telemetry
+    final error = result.error;
+    if (error != null) {
+      Telemetry.error(error);
+    }
+    
+    return result;
+  }
+
+  /// The actual operation implementation.
+  /// 
+  /// Subclasses must implement this method instead of [run].
+  /// The [run] method wraps this to add telemetry logging.
+  Future<LH2OpResult<Out>> execute(In input);
 
   /// Captures the current code location from stack trace.
+  /// 
+  /// Uses [captureLocation] helper for consistent formatting.
   String? _captureLocation() {
     try {
       throw StackTrace.current;
     } catch (_, stackTrace) {
-      final frames = stackTrace.toString().split('\n');
-      // Skip the first 2 frames (this method + run)
-      for (var i = 2; i < frames.length && i < 8; i++) {
-        final frame = frames[i].trim();
-        if (frame.isNotEmpty && !frame.contains('LH2Operation')) {
-          return frame;
-        }
-      }
-      return frames.length > 2 ? frames[2].trim() : null;
+      // Use the shared captureLocation helper
+      return captureLocation(stackTrace, maxFrames: 8);
     }
   }
 
@@ -187,12 +203,12 @@ abstract class LH2Operation<In, Out> {
 /// ```
 Future<T> runOrThrow<T>(LH2Operation<dynamic, T> op, dynamic input) async {
   final result = await op.run(input);
-  
+
   final error = result.error;
   if (error != null && error.isFatal) {
     throw error;
   }
-  
+
   return result.getOrThrow();
 }
 

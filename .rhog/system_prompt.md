@@ -1,4 +1,4 @@
-Task 7.1-1: Scaffold Flutter web app
+Task 7.3-1: Telemetry logger (console JSON)
 
 ---
 
@@ -10,34 +10,30 @@ You have access to the Chrome browser instance, so navigate to `localhost:8080` 
 
 Your job is to implement without breaking existing functionality, the specified task:
 
-##### Task 7.1-2: Riverpod DI composition root [L4]
+##### Task 7.3-1: Telemetry logger (console JSON) [L3]
 
 - Deliverable:
-  - Riverpod provider graph for app singletons: `FirebaseApp`, `FirebaseFirestore`, `FirebaseAuth` (even if auth flow is stubbed), `FirestoreDBInterface`, `LH2API`, caches, workspace repository.
-  - Clear layering: UI → application/services → data.
+  - Console-only JSON telemetry logs with: error message, operation id, payload, code location.
 - Prompt:
 ```text
-Prompt (L4):
+Prompt (L3):
 
-Implement the LH2 dependency injection and layering using Riverpod.
+Implement LH2 telemetry instrumentation (FEATURES.md §7.3.1).
 
-Constraints:
-- Flutter Web.
-- Keep layering clear:
-  - data/: FirestoreDBInterface, repositories
-  - domain/: operations, models (lh2_stub types), controller state
-  - ui/: widgets
+Requirements:
+- Log JSON to console only.
+- For any LH2OpError, produce a JSON object with:
+  - ts (epoch millis)
+  - level ("error"|"warn")
+  - message
+  - operationId
+  - errorCode
+  - payload (JSON)
+  - location (string like "lib/.../file.dart:Class.method")
 
-Implement providers (names are required):
-- firebaseAppProvider: FutureProvider<FirebaseApp>
-- firestoreProvider: Provider<FirebaseFirestore>
-- authProvider: Provider<FirebaseAuth>
-- dbProvider: Provider<FirestoreDBInterface>
-- lh2ApiProvider: Provider<LH2API>
-- workspaceRepoProvider: Provider<WorkspaceRepository>
-- caches: Provider<GenericCache<T>> for each LH2Object type (or a typed wrapper)
+Implement:
+- class Telemetry { void error(LH2OpError e); void warn(...); }
+- helper `String captureLocation(StackTrace st, {int maxFrames = 8})`
 
-Include:
-- A single file that acts as the composition root (e.g. lib/app/providers.dart).
-- Example usage from UI to read LH2API and workspace repo.
+Ensure logging is used by the operation framework (Appendix G).
 ```

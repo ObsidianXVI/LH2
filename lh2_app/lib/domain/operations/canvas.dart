@@ -73,7 +73,7 @@ class CanvasAddItemOp extends LH2Operation<CanvasAddItemInput, CanvasAddItemOutp
   String get operationId => 'api.canvas.addItem';
 
   @override
-  Future<LH2OpResult<CanvasAddItemOutput>> run(CanvasAddItemInput input) async {
+  Future<LH2OpResult<CanvasAddItemOutput>> execute(CanvasAddItemInput input) async {
     try {
       // Validate input
       if (input.workspaceId.isEmpty || input.tabId.isEmpty) {
@@ -216,7 +216,7 @@ class CanvasUpdateViewportOp
   String get operationId => 'api.canvas.updateViewport';
 
   @override
-  Future<LH2OpResult<CanvasUpdateViewportOutput>> run(
+  Future<LH2OpResult<CanvasUpdateViewportOutput>> execute(
     CanvasUpdateViewportInput input,
   ) async {
     try {

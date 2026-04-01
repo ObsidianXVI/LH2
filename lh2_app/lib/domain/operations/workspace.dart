@@ -62,7 +62,7 @@ class WorkspaceLoadOp extends LH2Operation<WorkspaceLoadInput, WorkspaceLoadOutp
   String get operationId => 'api.workspace.load';
 
   @override
-  Future<LH2OpResult<WorkspaceLoadOutput>> run(WorkspaceLoadInput input) async {
+  Future<LH2OpResult<WorkspaceLoadOutput>> execute(WorkspaceLoadInput input) async {
     try {
       if (input.workspaceId.isEmpty) {
         return LH2OpResult.error(
@@ -198,7 +198,7 @@ class WorkspaceSaveOp extends LH2Operation<WorkspaceSaveInput, WorkspaceSaveOutp
   String get operationId => 'api.workspace.save';
 
   @override
-  Future<LH2OpResult<WorkspaceSaveOutput>> run(WorkspaceSaveInput input) async {
+  Future<LH2OpResult<WorkspaceSaveOutput>> execute(WorkspaceSaveInput input) async {
     try {
       if (input.workspaceId.isEmpty) {
         return LH2OpResult.error(

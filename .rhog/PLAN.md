@@ -160,6 +160,8 @@ Do not implement UI yet, but provide example usage from a Riverpod notifier.
 
 ##### Task 7.3-1: Telemetry logger (console JSON) [L3]
 
+*DONE*
+
 - Deliverable:
   - Console-only JSON telemetry logs with: error message, operation id, payload, code location.
 - Prompt:
