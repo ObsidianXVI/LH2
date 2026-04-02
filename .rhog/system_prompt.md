@@ -1,4 +1,4 @@
-Task 2.5.2-1: Cmd+M marquee mode
+Task 3.1.1-1: Text widget rendering + editing
 
 I am developing a web app for personal use. It will be build using the Flutter framework (Dart language) for the Web platform. I am planning to use Firebase for the backend, and have the emulators downloaded for debugging/dev purposes. The project has been planned in `.rhog/PLAN.md`, based on the `FEATURES.md` file. The `.rhog` subdirectory contains reference images (in `/mockups`), boilerplate code (in `/boilerplate`), and useful information (in `/skills`). You have access to Flutter and Chrome devtools for debugging, inspection, loggin, profiling, etc.
 
@@ -8,26 +8,19 @@ DO NOT modify `system_prompt.md` or `PLAN.md`
 
 Your job is to implement without breaking existing functionality, the specified task:
 
-###### Task 2.5.2-1: Cmd+M marquee mode [L4]
+###### Task 3.1.1-1: Text widget rendering + editing [L2]
 
 ```text
-Prompt (L4):
+Prompt (L2):
 
-Implement marquee selection per FEATURES.md §2.5.2.
+Implement the Text Widget per FEATURES.md §3.1.1.
 
 Requirements:
-- Press Cmd+M to enter marquee mode.
-- First pointer down defines start world point.
-- Drag defines translucent selection rectangle.
-- All nodes/widgets inside rectangle become selected and get border matching marquee border color.
+- Editable text field.
+- Style configurable (font size, color) within constraints of LH2 theme.
 
-Implementation shape:
-- Shortcuts engine dispatches `Cmd+M` -> enterMarqueeMode()
-- MarqueeSelectionController stores:
-  - enabled
-  - startWorld
-  - currentWorld
-
-- During drag, compute selection:
-  - for each item with worldBounds intersects marqueeRect => include
+Data model:
+- CanvasItem.kind = widget
+- widgetType = text
+- config JSON: { text, style: { fontSize, color } }
 ```

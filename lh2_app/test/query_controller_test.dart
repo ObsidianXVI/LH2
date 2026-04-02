@@ -31,7 +31,7 @@ void main() {
         'with numbers 123',
         'with special chars !@#\$%',
         'unicode: 你好世界',
-        'very long query ' + 'x' * 1000,
+        'very long query ${'x' * 1000}',
       ];
 
       for (final testCase in testCases) {

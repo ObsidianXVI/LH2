@@ -128,7 +128,7 @@ void main() {
     test('World to screen coordinate transformation works', () {
       final controller = FlowCanvasController(
         viewport: const CanvasViewport(
-          pan: const Offset(100, 200),
+          pan: Offset(100, 200),
           zoom: 2.0,
           viewportSizePx: Size(800, 600),
         ),
@@ -143,7 +143,7 @@ void main() {
     test('Screen to world coordinate transformation works', () {
       final controller = FlowCanvasController(
         viewport: const CanvasViewport(
-          pan: const Offset(100, 200),
+          pan: Offset(100, 200),
           zoom: 2.0,
           viewportSizePx: Size(800, 600),
         ),
@@ -158,7 +158,7 @@ void main() {
     test('Viewport panning works correctly', () {
       final controller = FlowCanvasController(
         viewport: const CanvasViewport(
-          pan: const Offset(0, 0),
+          pan: Offset(0, 0),
           zoom: 1.0,
           viewportSizePx: Size(800, 600),
         ),
@@ -175,7 +175,7 @@ void main() {
     test('Viewport zooming works correctly', () {
       final controller = FlowCanvasController(
         viewport: const CanvasViewport(
-          pan: const Offset(0, 0),
+          pan: Offset(0, 0),
           zoom: 1.0,
           viewportSizePx: Size(800, 600),
         ),
@@ -190,7 +190,7 @@ void main() {
     test('Selection management works correctly', () {
       final controller = FlowCanvasController(
         viewport: const CanvasViewport(
-          pan: const Offset(0, 0),
+          pan: Offset(0, 0),
           zoom: 1.0,
           viewportSizePx: Size(800, 600),
         ),
@@ -211,7 +211,7 @@ void main() {
     test('Item management works correctly', () {
       final controller = FlowCanvasController(
         viewport: const CanvasViewport(
-          pan: const Offset(0, 0),
+          pan: Offset(0, 0),
           zoom: 1.0,
           viewportSizePx: Size(800, 600),
         ),
@@ -239,7 +239,7 @@ void main() {
     test('Visible object computation works correctly', () {
       final controller = FlowCanvasController(
         viewport: const CanvasViewport(
-          pan: const Offset(0, 0),
+          pan: Offset(0, 0),
           zoom: 1.0,
           viewportSizePx: Size(800, 600),
         ),
@@ -266,7 +266,7 @@ void main() {
     test('Grid snapping works correctly', () {
       final controller = FlowCanvasController(
         viewport: const CanvasViewport(
-          pan: const Offset(0, 0),
+          pan: Offset(0, 0),
           zoom: 1.0,
           viewportSizePx: Size(800, 600),
         ),

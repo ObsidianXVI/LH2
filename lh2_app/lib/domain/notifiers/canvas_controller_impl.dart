@@ -84,12 +84,14 @@ class CanvasItem {
   final String itemType; // 'node' | 'widget'
   final Rect worldRect;
   final String? objectId; // Firestore doc id (for nodes)
+  final Map<String, dynamic>? config;
 
   const CanvasItem({
     required this.itemId,
     required this.itemType,
     required this.worldRect,
     this.objectId,
+    this.config,
   });
 
   factory CanvasItem.fromJson(String itemId, Map<String, Object?> json) {
@@ -111,6 +113,7 @@ class CanvasItem {
         (worldRectJson['h'] as num).toDouble(),
       ),
       objectId: json['objectId'] as String?,
+      config: json['config'] as Map<String, dynamic>?,
     );
   }
 
@@ -124,6 +127,7 @@ class CanvasItem {
         'h': worldRect.height,
       },
       if (objectId != null) 'objectId': objectId,
+      if (config != null) 'config': config,
     };
   }
 }
@@ -278,9 +282,24 @@ abstract class CanvasController extends ChangeNotifier {
         itemType: item.itemType,
         worldRect: newWorldRect,
         objectId: item.objectId,
+        config: item.config,
       );
       notifyListeners();
     }
+  }
+
+  /// Update an item's config (for text editing, etc.)
+  void updateItemConfig(String itemId, Map<String, dynamic> newConfig) {
+    final item = _items[itemId];
+    if (item == null) return;
+    _items[itemId] = CanvasItem(
+      itemId: item.itemId,
+      itemType: item.itemType,
+      worldRect: item.worldRect,
+      objectId: item.objectId,
+      config: newConfig,
+    );
+    notifyListeners();
   }
 
   /// Remove an item from the canvas

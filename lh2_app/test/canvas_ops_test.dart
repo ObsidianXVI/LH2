@@ -1,7 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lh2_app/domain/operations/canvas.dart';
 import 'package:lh2_app/data/workspace_repository.dart';
-import 'dart:async';
 
 // Manual Mock
 class MockWorkspaceRepository implements WorkspaceRepository {

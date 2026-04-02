@@ -21,5 +21,17 @@ class DemoCanvasItems {
       itemType: 'widget',
       worldRect: const Rect.fromLTWH(200, 350, 150, 100),
     ),
+    CanvasItem(
+      itemId: 'demo-text',
+      itemType: 'text',
+      worldRect: const Rect.fromLTWH(500, 100, 200, 60),
+      config: {
+        'text': 'Editable Text Widget',
+        'style': {
+          'fontSize': 18.0,
+          'color': 0xFF2196F3, // blue
+        },
+      },
+    ),
   ];
 }

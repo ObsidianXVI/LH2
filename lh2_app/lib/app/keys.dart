@@ -24,6 +24,7 @@
 ///
 /// CanvasItem keys (future CanvasItem.id):
 ///
+library;
 import 'package:flutter/foundation.dart';
 
 Key canvasItemKey(String itemId) => ValueKey('canvasItem/$itemId');

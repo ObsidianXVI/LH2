@@ -27,6 +27,7 @@ dependencies:
   # Canvas and node visualization
   vs_node_view: ^2.1.0
 
+  collection: any
 dev_dependencies:
   flutter_test:
     sdk: flutter

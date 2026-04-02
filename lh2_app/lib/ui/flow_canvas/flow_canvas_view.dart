@@ -7,18 +7,18 @@ import 'package:lh2_app/domain/notifiers/canvas_controller_impl.dart';
 import 'package:lh2_app/domain/notifiers/workspace_controller.dart';
 import 'package:lh2_app/domain/operations/canvas.dart';
 import 'package:lh2_app/domain/operations/core.dart';
-
-import '../../ui/theme/tokens.dart';
-import '../../data/workspace_repository.dart';
-import 'grid_background_painter.dart';
-import 'demo_items.dart';
-import 'canvas_context_menu.dart';
-import '../info_popup_overlay.dart';
-import '../crosshair_overlay.dart';
+import 'package:lh2_app/ui/theme/tokens.dart';
+import 'package:lh2_app/data/workspace_repository.dart';
+import 'package:lh2_app/ui/flow_canvas/canvas_context_menu.dart';
+import 'package:lh2_app/ui/info_popup_overlay.dart';
+import 'package:lh2_app/ui/crosshair_overlay.dart';
 import 'package:lh2_app/domain/notifiers/crosshair_mode_controller.dart';
 import 'package:lh2_app/domain/notifiers/info_popup_controller.dart';
 import 'package:lh2_app/domain/notifiers/marquee_selection_controller.dart';
-import '../../app/providers.dart';
+import 'package:lh2_app/app/providers.dart';
+import 'package:lh2_app/ui/flow_canvas/grid_background_painter.dart';
+import 'package:lh2_app/ui/flow_canvas/demo_items.dart';
+import 'package:lh2_app/ui/flow_canvas/canvas_provider.dart';
 
 /// Flow Canvas widget that renders an infinite scroll canvas with grid background,
 /// pan/zoom interactions, and draggable items.
@@ -38,6 +38,10 @@ class _FlowCanvasViewState extends ConsumerState<FlowCanvasView> {
   OverlayEntry? _contextMenuOverlay;
   String? _hoveredItemId;
   Timer? _hoverCloseTimer;
+  String? _editingItemId;
+  TextEditingController? _textController;
+  Timer? _textPersistenceTimer;
+  final FocusNode _focusNode = FocusNode();
 
   @override
   void initState() {
@@ -49,6 +53,9 @@ class _FlowCanvasViewState extends ConsumerState<FlowCanvasView> {
   void dispose() {
     widget.controller.removeListener(_onControllerChanged);
     _removeContextMenu();
+    _textController?.dispose();
+    _focusNode.dispose();
+    _textPersistenceTimer?.cancel();
     super.dispose();
   }
 
@@ -183,6 +190,7 @@ class _FlowCanvasViewState extends ConsumerState<FlowCanvasView> {
   Widget _buildCanvasItem(String itemId, CanvasItem item) {
     final screenRect = _worldRectToScreen(item.worldRect);
     final isSelected = widget.controller.selection.contains(itemId);
+    final isEditing = _editingItemId == itemId && item.itemType == 'text';
 
     return Positioned(
       left: screenRect.left,
@@ -203,17 +211,88 @@ class _FlowCanvasViewState extends ConsumerState<FlowCanvasView> {
             borderRadius: BorderRadius.circular(4),
           ),
           child: Center(
-            child: Text(
-              item.itemType,
-              style: const TextStyle(
-                color: LH2Colors.textPrimary,
-                fontSize: 12,
-              ),
-            ),
+            child: item.itemType == 'text'
+                ? (isEditing ? _buildTextEditor(item) : _buildTextDisplay(item))
+                : Text(
+                    item.itemType,
+                    style: const TextStyle(
+                      color: LH2Colors.textPrimary,
+                      fontSize: 12,
+                    ),
+                  ),
           ),
         ),
       ),
     );
+  }
+
+  Widget _buildTextDisplay(CanvasItem item) {
+    final config = item.config;
+    final text = config?['text'] as String? ?? 'Text';
+    final styleConfig = config?['style'] as Map<String, dynamic>?;
+    final fontSize = styleConfig?['fontSize'] as double? ?? 16.0;
+    final colorInt = styleConfig?['color'] as int? ?? LH2Colors.textPrimary.value;
+    final style = TextStyle(
+      fontSize: fontSize,
+      color: Color(colorInt),
+    );
+
+    return Text(
+      text,
+      style: style,
+      textAlign: TextAlign.center,
+    );
+  }
+
+  Widget _buildTextEditor(CanvasItem item) {
+    final config = item.config;
+    final text = config?['text'] as String? ?? 'Text';
+    final styleConfig = config?['style'] as Map<String, dynamic>?;
+    final fontSize = styleConfig?['fontSize'] as double? ?? 16.0;
+    final colorInt = styleConfig?['color'] as int? ?? LH2Colors.textPrimary.value;
+    final style = TextStyle(
+      fontSize: fontSize,
+      color: Color(colorInt),
+    );
+
+    _textController?.dispose();
+    _textController = TextEditingController(text: text);
+    _textController!.addListener(_debounceTextChange);
+
+    return TextField(
+      controller: _textController,
+      focusNode: _focusNode,
+      style: style,
+      maxLines: null,
+      textAlign: TextAlign.center,
+      decoration: const InputDecoration(
+        border: InputBorder.none,
+        contentPadding: EdgeInsets.zero,
+      ),
+      onSubmitted: (_) => _commitTextEdit(),
+    );
+  }
+
+  void _debounceTextChange() {
+    _textPersistenceTimer?.cancel();
+    _textPersistenceTimer = Timer(const Duration(milliseconds: 500), () {
+      if (_editingItemId != null && _textController != null) {
+        final newConfig = Map<String, dynamic>.from(widget.controller.items[_editingItemId!]!.config ?? {});
+        newConfig['text'] = _textController!.text;
+        widget.controller.updateItemConfig(_editingItemId!, newConfig);
+      }
+    });
+  }
+
+  void _commitTextEdit() {
+    if (_editingItemId == null || _textController == null) return;
+    final newConfig = Map<String, dynamic>.from(widget.controller.items[_editingItemId!]!.config ?? {});
+    newConfig['text'] = _textController!.text;
+    widget.controller.updateItemConfig(_editingItemId!, newConfig);
+    _textController!.removeListener(_debounceTextChange);
+    _textController?.dispose();
+    _textController = null;
+    _editingItemId = null;
   }
 
   Widget _buildSelectionOverlay() {
@@ -263,6 +342,9 @@ class _FlowCanvasViewState extends ConsumerState<FlowCanvasView> {
   }
 
   void _handleItemTap(String itemId) {
+    final item = widget.controller.items[itemId];
+    if (item == null) return;
+
     final bool isShiftPressed = HardwareKeyboard.instance
             .isLogicalKeyPressed(LogicalKeyboardKey.shiftLeft) ||
         HardwareKeyboard.instance
@@ -287,6 +369,15 @@ class _FlowCanvasViewState extends ConsumerState<FlowCanvasView> {
         newSelection.add(itemId);
       }
       widget.controller.setSelection(newSelection);
+    } else if (item.itemType == 'text') {
+      // Toggle edit mode for text items
+      if (_editingItemId == itemId) {
+        _commitTextEdit();
+      } else {
+        // Start editing
+        widget.controller.setSelection({itemId});
+        _editingItemId = itemId;
+      }
     } else {
       widget.controller.setSelection({itemId});
     }
@@ -347,6 +438,7 @@ class _FlowCanvasViewState extends ConsumerState<FlowCanvasView> {
               },
               'snap': {'startSnapped': false, 'endSnapped': false},
               if (item.objectId != null) 'objectId': item.objectId,
+              if (item.config != null) 'config': item.config,
             };
           }
         }

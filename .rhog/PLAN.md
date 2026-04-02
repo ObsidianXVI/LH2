@@ -798,6 +798,8 @@ Menu integration:
 
 ###### Task 2.5.2-1: Cmd+M marquee mode [L4]
 
+*DONE*
+
 ```text
 Prompt (L4):
 
