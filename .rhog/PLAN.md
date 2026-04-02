@@ -624,7 +624,6 @@ Ensure the shape is stable for saving in Firestore WorkspaceTab.controller.
 
 ###### Task 2.1-2: Flow Canvas rendering + interaction (grid, pan/zoom, item drag) [L4]
 
-*DONE*
 
 ```text
 Prompt (L4):

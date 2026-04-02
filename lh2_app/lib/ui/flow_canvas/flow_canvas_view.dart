@@ -1,15 +1,20 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lh2_app/domain/notifiers/canvas_controller_impl.dart';
 import 'package:lh2_app/domain/notifiers/workspace_controller.dart';
+import 'package:lh2_app/domain/operations/canvas.dart';
+import 'package:lh2_app/domain/operations/core.dart';
 
 import '../../ui/theme/tokens.dart';
+import '../../data/workspace_repository.dart';
 import 'grid_background_painter.dart';
 import 'demo_items.dart';
 import 'canvas_context_menu.dart';
 import '../info_popup_overlay.dart';
+import '../../app/providers.dart';
 
 /// Flow Canvas widget that renders an infinite scroll canvas with grid background,
 /// pan/zoom interactions, and draggable items.
@@ -59,15 +64,42 @@ class _FlowCanvasViewState extends ConsumerState<FlowCanvasView> {
         return Listener(
           onPointerSignal: (PointerSignalEvent event) {
             if (event is PointerScrollEvent) {
-              // Two-finger scroll panning
+              // Two-finger scroll panning (trackpad/mouse wheel).
+              // Note: we intentionally pan in BOTH axes and do not require
+              // pointer-down dragging, since pointer drag is reserved for
+              // moving nodes/widgets.
               widget.controller.panBy(event.scrollDelta);
+              // Trigger rebuild to update grid and items
+              setState(() {});
+            }
+          },
+          onPointerPanZoomUpdate: (PointerPanZoomUpdateEvent event) {
+            // Trackpad pinch/2-finger gestures on desktop/web.
+            // We handle these at the Listener level to avoid competing with
+            // item drag gestures (child GestureDetectors) in the gesture arena.
+            //
+            // - pan: two-finger pan gesture
+            // - scale: pinch-to-zoom
+            if (event.panDelta != Offset.zero) {
+              widget.controller.panBy(event.panDelta);
+              // Trigger rebuild to update grid and items
+              setState(() {});
+            }
+            if (event.scale != 1.0) {
+              widget.controller.zoomAt(
+                focalScreen: event.position,
+                scaleDelta: event.scale,
+              );
+              // Trigger rebuild to update grid and items
+              setState(() {});
             }
           },
           child: GestureDetector(
-            onScaleStart: _handleScaleStart,
-            onScaleUpdate: _handleScaleUpdate,
+            // Keep taps/right-click, but remove scale handlers so node dragging
+            // stays smooth.
             onTapUp: _handleTapUp,
             onSecondaryTapUp: _handleRightClick,
+            behavior: HitTestBehavior.opaque,
             child: MouseRegion(
               cursor: SystemMouseCursors.basic,
               child: Stack(
@@ -201,38 +233,94 @@ class _FlowCanvasViewState extends ConsumerState<FlowCanvasView> {
     widget.controller.setSelection(_selectedItems);
   }
 
-  late Offset _itemDragStartWorld;
-  late Rect _itemOriginalRect;
-
   void _handleItemDragStart(String itemId, DragStartDetails details) {
-    final item = widget.controller.items[itemId];
-    if (item != null) {
-      _itemDragStartWorld = widget.controller.screenToWorld(details.localPosition);
-      _itemOriginalRect = item.worldRect;
-    }
+    // No-op for now.
+    // Dragging is handled incrementally in _handleItemDragUpdate using
+    // DragUpdateDetails.delta for smooth realtime movement.
   }
 
   void _handleItemDragUpdate(String itemId, DragUpdateDetails details) {
-    final currentWorld = widget.controller.screenToWorld(details.localPosition);
-    final deltaWorld = currentWorld - _itemDragStartWorld;
+    // Update in realtime by applying the incremental screen-space delta.
+    //
+    // NOTE: Do NOT use details.localPosition here because it's relative to the
+    // item widget itself (which is moving), which can cause lag/jumps and make
+    // the drag feel like it only updates on drag end.
     final item = widget.controller.items[itemId];
+    if (item == null) return;
 
-    if (item != null) {
-      final newRect = _itemOriginalRect.shift(deltaWorld);
-      widget.controller.updateItemRect(itemId, newRect);
-    }
+    final deltaWorld = details.delta / widget.controller.viewport.zoom;
+    final newRect = item.worldRect.shift(deltaWorld);
+    widget.controller.updateItemRect(itemId, newRect);
+    
+    // Trigger rebuild to show item movement in real-time
+    setState(() {});
+    
+    // Debounce persistence to Firestore (high-frequency updates)
+    _debounceItemPersistence(itemId, newRect);
   }
 
-  void _handleScaleStart(ScaleStartDetails details) {
-    // Scale start logic
+  Timer? _persistenceTimer;
+  final Map<String, Rect> _pendingPersistence = {};
+
+  void _debounceItemPersistence(String itemId, Rect newRect) {
+    _pendingPersistence[itemId] = newRect;
+    
+    _persistenceTimer?.cancel();
+    _persistenceTimer = Timer(const Duration(milliseconds: 500), () async {
+      // Persist all pending changes to Firestore
+      final workspaceState = ref.read(workspaceControllerProvider);
+      final workspaceId = workspaceState.workspaceId;
+      final tabId = workspaceState.activeTabId;
+      
+      if (workspaceId.isEmpty || tabId == null) {
+        _pendingPersistence.clear();
+        return;
+      }
+      
+      try {
+        // Build updated items map with new positions
+        final updatedItems = Map<String, Object?>.from(widget.controller.items);
+        for (final entry in _pendingPersistence.entries) {
+          final itemId = entry.key;
+          final newRect = entry.value;
+          final item = widget.controller.items[itemId];
+          
+          if (item != null) {
+            // Update the item's worldRect in the items map
+            updatedItems[itemId] = {
+              'schemaVersion': 1,
+              'itemId': itemId,
+              'itemType': item.itemType,
+              'worldRect': {
+                'x': newRect.left,
+                'y': newRect.top,
+                'w': newRect.width,
+                'h': newRect.height,
+              },
+              'snap': {'startSnapped': false, 'endSnapped': false},
+              if (item.objectId != null) 'objectId': item.objectId,
+            };
+          }
+        }
+        
+        // Persist items to Firestore
+        final workspaceRepo = ref.read(workspaceRepoProvider);
+        await workspaceRepo.updateTab(
+          workspaceId,
+          tabId,
+          WorkspaceTabPatch(items: updatedItems),
+        );
+      } catch (e) {
+        // Log error but don't crash
+        print('Error persisting item positions: $e');
+      }
+      
+      _pendingPersistence.clear();
+    });
   }
 
-  void _handleScaleUpdate(ScaleUpdateDetails details) {
-    // Handle zooming
-    if (details.scale != 1.0) {
-      _zoomAt(details.localFocalPoint, details.scale);
-    }
-  }
+  // Scale gestures are intentionally handled via Listener's
+  // onPointerPanZoomUpdate to avoid competing with item dragging.
 
   // Helper methods
   void _addDemoItems() {
@@ -279,6 +367,7 @@ class _FlowCanvasViewState extends ConsumerState<FlowCanvasView> {
     _contextMenuOverlay = null;
   }
 
+  // ignore: unused_element
   void _zoomAt(Offset focalScreen, double scaleDelta) {
     widget.controller.zoomAt(focalScreen: focalScreen, scaleDelta: scaleDelta);
   }
