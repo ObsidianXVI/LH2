@@ -13,6 +13,7 @@ class InfoPopupState {
   final Rect? anchorScreenRect;
   final ObjectType? objectType;
   final String? templateId;
+  final bool isHovered;
 
   const InfoPopupState({
     this.itemId,
@@ -21,6 +22,7 @@ class InfoPopupState {
     this.anchorScreenRect,
     this.objectType,
     this.templateId,
+    this.isHovered = false,
   });
 
   InfoPopupState copyWith({
@@ -30,6 +32,7 @@ class InfoPopupState {
     Rect? anchorScreenRect,
     ObjectType? objectType,
     String? templateId,
+    bool? isHovered,
   }) {
     return InfoPopupState(
       itemId: itemId ?? this.itemId,
@@ -38,6 +41,7 @@ class InfoPopupState {
       anchorScreenRect: anchorScreenRect ?? this.anchorScreenRect,
       objectType: objectType ?? this.objectType,
       templateId: templateId ?? this.templateId,
+      isHovered: isHovered ?? this.isHovered,
     );
   }
 }
@@ -81,7 +85,12 @@ class InfoPopupController extends Notifier<InfoPopupState> {
 
   /// Closes the popup.
   void close() {
-    state = state.copyWith(isOpen: false);
+    state = state.copyWith(isOpen: false, isHovered: false);
+  }
+
+  /// Sets whether the mouse is over the popup itself.
+  void setIsHovered(bool isHovered) {
+    state = state.copyWith(isHovered: isHovered);
   }
 }
 

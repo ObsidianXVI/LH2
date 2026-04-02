@@ -14,6 +14,9 @@ import 'grid_background_painter.dart';
 import 'demo_items.dart';
 import 'canvas_context_menu.dart';
 import '../info_popup_overlay.dart';
+import '../crosshair_overlay.dart';
+import 'package:lh2_app/domain/notifiers/crosshair_mode_controller.dart';
+import 'package:lh2_app/domain/notifiers/info_popup_controller.dart';
 import '../../app/providers.dart';
 
 /// Flow Canvas widget that renders an infinite scroll canvas with grid background,
@@ -33,6 +36,8 @@ class FlowCanvasView extends ConsumerStatefulWidget {
 class _FlowCanvasViewState extends ConsumerState<FlowCanvasView> {
   final Set<String> _selectedItems = {};
   OverlayEntry? _contextMenuOverlay;
+  String? _hoveredItemId;
+  Timer? _hoverCloseTimer;
 
   @override
   void initState() {
@@ -102,6 +107,7 @@ class _FlowCanvasViewState extends ConsumerState<FlowCanvasView> {
             behavior: HitTestBehavior.opaque,
             child: MouseRegion(
               cursor: SystemMouseCursors.basic,
+              onHover: _handleHover,
               child: Stack(
                 children: [
                   // Grid background
@@ -123,6 +129,9 @@ class _FlowCanvasViewState extends ConsumerState<FlowCanvasView> {
 
                   // Information Popup
                   const InfoPopupOverlay(),
+
+                  // Crosshair Overlay
+                  const CrosshairOverlay(),
 
                   // Add demo items button
                   Positioned(
@@ -251,10 +260,10 @@ class _FlowCanvasViewState extends ConsumerState<FlowCanvasView> {
     final deltaWorld = details.delta / widget.controller.viewport.zoom;
     final newRect = item.worldRect.shift(deltaWorld);
     widget.controller.updateItemRect(itemId, newRect);
-    
+
     // Trigger rebuild to show item movement in real-time
     setState(() {});
-    
+
     // Debounce persistence to Firestore (high-frequency updates)
     _debounceItemPersistence(itemId, newRect);
   }
@@ -264,19 +273,19 @@ class _FlowCanvasViewState extends ConsumerState<FlowCanvasView> {
 
   void _debounceItemPersistence(String itemId, Rect newRect) {
     _pendingPersistence[itemId] = newRect;
-    
+
     _persistenceTimer?.cancel();
     _persistenceTimer = Timer(const Duration(milliseconds: 500), () async {
       // Persist all pending changes to Firestore
       final workspaceState = ref.read(workspaceControllerProvider);
       final workspaceId = workspaceState.workspaceId;
       final tabId = workspaceState.activeTabId;
-      
+
       if (workspaceId.isEmpty || tabId == null) {
         _pendingPersistence.clear();
         return;
       }
-      
+
       try {
         // Build updated items map with new positions
         final updatedItems = Map<String, Object?>.from(widget.controller.items);
@@ -284,7 +293,7 @@ class _FlowCanvasViewState extends ConsumerState<FlowCanvasView> {
           final itemId = entry.key;
           final newRect = entry.value;
           final item = widget.controller.items[itemId];
-          
+
           if (item != null) {
             // Update the item's worldRect in the items map
             updatedItems[itemId] = {
@@ -302,7 +311,7 @@ class _FlowCanvasViewState extends ConsumerState<FlowCanvasView> {
             };
           }
         }
-        
+
         // Persist items to Firestore
         final workspaceRepo = ref.read(workspaceRepoProvider);
         await workspaceRepo.updateTab(
@@ -314,7 +323,7 @@ class _FlowCanvasViewState extends ConsumerState<FlowCanvasView> {
         // Log error but don't crash
         print('Error persisting item positions: $e');
       }
-      
+
       _pendingPersistence.clear();
     });
   }
@@ -331,6 +340,9 @@ class _FlowCanvasViewState extends ConsumerState<FlowCanvasView> {
   }
 
   void _handleRightClick(TapUpDetails details) {
+    final crosshairState = ref.read(crosshairModeControllerProvider);
+    if (crosshairState.enabled) return;
+
     // Remove any existing context menu
     _removeContextMenu();
 
@@ -365,6 +377,75 @@ class _FlowCanvasViewState extends ConsumerState<FlowCanvasView> {
   void _removeContextMenu() {
     _contextMenuOverlay?.remove();
     _contextMenuOverlay = null;
+  }
+
+  void _handleHover(PointerHoverEvent event) {
+    final worldPos = widget.controller.screenToWorld(event.localPosition);
+    String? hitItemId;
+    CanvasItem? hitItem;
+    for (final entry in widget.controller.items.entries.toList().reversed) {
+      if (entry.value.worldRect.contains(worldPos)) {
+        hitItemId = entry.key;
+        hitItem = entry.value;
+        break;
+      }
+    }
+
+    final crosshairNotifier =
+        ref.read(crosshairModeControllerProvider.notifier);
+    final crosshairState = ref.read(crosshairModeControllerProvider);
+    final infoController = ref.read(infoPopupControllerProvider.notifier);
+    final infoState = ref.read(infoPopupControllerProvider);
+
+    if (crosshairState.enabled) {
+      crosshairNotifier.setHoveredItemId(hitItemId);
+    } else {
+      if (_hoveredItemId != hitItemId) {
+        _hoveredItemId = hitItemId;
+        if (hitItemId != null && hitItem != null) {
+          _hoverCloseTimer?.cancel();
+          // Calculate screen rect for the hit item
+          final screenRect = _worldRectToScreen(hitItem.worldRect);
+          infoController.openViewMode(
+            itemId: hitItemId,
+            anchorScreenRect: screenRect,
+          );
+        } else {
+          // If we left a node, start a timer to close the popup,
+          // unless the mouse is already over the popup.
+          _hoverCloseTimer?.cancel();
+          _hoverCloseTimer = Timer(const Duration(milliseconds: 300), () {
+            final currentState = ref.read(infoPopupControllerProvider);
+            if (!currentState.isHovered && _hoveredItemId == null) {
+              infoController.close();
+            }
+          });
+        }
+      } else if (hitItemId == null) {
+        // We are still not hovering any node, but we might have moved from node to gap.
+        // If the popup is hovered, don't do anything.
+        if (!infoState.isHovered &&
+            infoState.isOpen &&
+            _hoverCloseTimer == null) {
+          _hoverCloseTimer = Timer(const Duration(milliseconds: 300), () {
+            final currentState = ref.read(infoPopupControllerProvider);
+            if (!currentState.isHovered && _hoveredItemId == null) {
+              infoController.close();
+            }
+          });
+        }
+      } else {
+        // Still hovering the same node, cancel any pending close timer.
+        _hoverCloseTimer?.cancel();
+        _hoverCloseTimer = null;
+      }
+
+      // If the popup is hovered, always cancel the timer.
+      if (infoState.isHovered) {
+        _hoverCloseTimer?.cancel();
+        _hoverCloseTimer = null;
+      }
+    }
   }
 
   // ignore: unused_element

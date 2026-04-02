@@ -624,6 +624,7 @@ Ensure the shape is stable for saving in Firestore WorkspaceTab.controller.
 
 ###### Task 2.1-2: Flow Canvas rendering + interaction (grid, pan/zoom, item drag) [L4]
 
+*DONE*
 
 ```text
 Prompt (L4):
@@ -720,6 +721,8 @@ Persist:
 
 ###### Task 2.4.2-1: Auto-open popup after adding a node/widget [L2]
 
+*DONE*
+
 ```text
 Prompt (L2):
 
@@ -733,10 +736,12 @@ Requirements:
 
 ##### 2.4.3: Crosshair Mode
 
-###### Task 2.4.3-1: Crosshair overlay side panel [L4]
+###### Task 2.4.3-1: Information overlay on hover and Crosshair overlay side panel [L4]
 
 ```text
 Prompt (L4):
+
+Implement Information overlay (same as Info popup when new node is added) whenver a node is hovered over.
 
 Implement Crosshair Mode per FEATURES.md §2.4.3.
 
