@@ -6,7 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 /// Canvas kind for workspace tabs.
 sealed class CanvasKind {
   const CanvasKind();
-  
+
   factory CanvasKind.fromJson(String value) {
     return switch (value) {
       'flow' => const FlowCanvasKind(),
@@ -14,11 +14,11 @@ sealed class CanvasKind {
       _ => throw ArgumentError('Unknown canvas kind: $value'),
     };
   }
-  
+
   String toJson() => switch (this) {
-    FlowCanvasKind() => 'flow',
-    CalendarCanvasKind() => 'calendar',
-  };
+        FlowCanvasKind() => 'flow',
+        CalendarCanvasKind() => 'calendar',
+      };
 }
 
 class FlowCanvasKind extends CanvasKind {
@@ -176,14 +176,18 @@ abstract class CanvasController extends ChangeNotifier {
 
   /// Convert world coordinates to screen coordinates
   Offset worldToScreen(Offset world) {
-    return (world - viewport.pan) * viewport.zoom + 
-           Offset(viewport.viewportSizePx.width / 2, viewport.viewportSizePx.height / 2);
+    return (world - viewport.pan) * viewport.zoom +
+        Offset(viewport.viewportSizePx.width / 2,
+            viewport.viewportSizePx.height / 2);
   }
 
   /// Convert screen coordinates to world coordinates
   Offset screenToWorld(Offset screen) {
-    return (screen - Offset(viewport.viewportSizePx.width / 2, viewport.viewportSizePx.height / 2)) / viewport.zoom + 
-           viewport.pan;
+    return (screen -
+                Offset(viewport.viewportSizePx.width / 2,
+                    viewport.viewportSizePx.height / 2)) /
+            viewport.zoom +
+        viewport.pan;
   }
 
   /// Get the world rectangle of the current viewport
@@ -197,6 +201,14 @@ abstract class CanvasController extends ChangeNotifier {
     );
   }
 
+  /// Update viewport size (in screen pixels).
+  ///
+  /// This is critical for correct screen<->world coordinate conversions.
+  void setViewportSize(Size viewportSizePx) {
+    if (viewport.viewportSizePx == viewportSizePx) return;
+    _updateViewport(viewport.copyWith(viewportSizePx: viewportSizePx));
+  }
+
   /// Pan the viewport by a delta in screen coordinates
   void panBy(Offset deltaScreen) {
     final deltaWorld = deltaScreen / viewport.zoom;
@@ -207,10 +219,14 @@ abstract class CanvasController extends ChangeNotifier {
   void zoomAt({required Offset focalScreen, required double scaleDelta}) {
     final focalWorld = screenToWorld(focalScreen);
     final newZoom = (viewport.zoom * scaleDelta).clamp(0.1, 10.0);
-    
+
     // Calculate new pan to keep the focal point stationary
-    final newPan = focalWorld - (focalScreen - Offset(viewport.viewportSizePx.width / 2, viewport.viewportSizePx.height / 2)) / newZoom;
-    
+    final newPan = focalWorld -
+        (focalScreen -
+                Offset(viewport.viewportSizePx.width / 2,
+                    viewport.viewportSizePx.height / 2)) /
+            newZoom;
+
     _updateViewport(viewport.copyWith(pan: newPan, zoom: newZoom));
   }
 
@@ -237,13 +253,13 @@ abstract class CanvasController extends ChangeNotifier {
   Set<String> computeVisibleObjectIds() {
     final visibleIds = <String>{};
     final viewportRect = viewportWorldRect;
-    
+
     for (final entry in items.entries) {
       if (viewportRect.overlaps(entry.value.worldRect)) {
         visibleIds.add(entry.key);
       }
     }
-    
+
     return visibleIds;
   }
 
@@ -280,10 +296,11 @@ abstract class CanvasController extends ChangeNotifier {
   /// Create from JSON
   factory CanvasController.fromJson(Map<String, Object?> json) {
     final kind = CanvasKind.fromJson(json['kind'] as String);
-    
+
     return switch (kind) {
       FlowCanvasKind() => FlowCanvasController.fromJson(json),
-      CalendarCanvasKind() => throw UnimplementedError('CalendarCanvasController not implemented yet'),
+      CalendarCanvasKind() => throw UnimplementedError(
+          'CalendarCanvasController not implemented yet'),
     };
   }
 
@@ -299,24 +316,27 @@ abstract class CanvasController extends ChangeNotifier {
   }
 
   void _initializeFromJson(Map<String, Object?> json) {
-    _viewport = CanvasViewport.fromJson(json['viewport'] as Map<String, Object?>);
-    
+    _viewport =
+        CanvasViewport.fromJson(json['viewport'] as Map<String, Object?>);
+
     _items = {};
-    final itemsJson = json['items'] as Map<dynamic, dynamic>? ?? <String, Object?>{};
+    final itemsJson =
+        json['items'] as Map<dynamic, dynamic>? ?? <String, Object?>{};
     for (final entry in itemsJson.entries) {
       final key = entry.key as String;
       final value = entry.value as Map<dynamic, dynamic>;
       _items[key] = CanvasItem.fromJson(key, value.cast<String, Object?>());
     }
-    
+
     _links = {};
-    final linksJson = json['links'] as Map<dynamic, dynamic>? ?? <String, Object?>{};
+    final linksJson =
+        json['links'] as Map<dynamic, dynamic>? ?? <String, Object?>{};
     for (final entry in linksJson.entries) {
       final key = entry.key as String;
       final value = entry.value as Map<dynamic, dynamic>;
       _links[key] = CanvasLink.fromJson(key, value.cast<String, Object?>());
     }
-    
+
     _selection = Set<String>.from(json['selection'] as List? ?? <String>[]);
   }
 }
@@ -340,7 +360,8 @@ class FlowCanvasController extends CanvasController {
 
   factory FlowCanvasController.fromJson(Map<String, Object?> json) {
     return FlowCanvasController(
-      viewport: CanvasViewport.fromJson(json['viewport'] as Map<String, Object?>),
+      viewport:
+          CanvasViewport.fromJson(json['viewport'] as Map<String, Object?>),
       items: {}, // Will be populated by _initializeFromJson
       links: {}, // Will be populated by _initializeFromJson
       selection: {}, // Will be populated by _initializeFromJson
@@ -386,6 +407,7 @@ class FlowCanvasController extends CanvasController {
 }
 
 /// Provider for creating canvas controllers from JSON data
-final canvasControllerProvider = Provider.family<CanvasController, Map<String, Object?>>((ref, json) {
+final canvasControllerProvider =
+    Provider.family<CanvasController, Map<String, Object?>>((ref, json) {
   return CanvasController.fromJson(json);
 });

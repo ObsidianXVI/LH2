@@ -771,6 +771,8 @@ Implementation shape:
 
 ###### Task 2.5.1-1: Multi-select with Cmd+Shift click + blue outline [L4]
 
+*DONE*
+
 ```text
 Prompt (L4):
 
