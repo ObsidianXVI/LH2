@@ -587,6 +587,8 @@ Add tests:
 
 ###### Task 2.1.1-1: Implement CanvasController base + FlowCanvasController (Appendix B) [L4]
 
+*DONE*
+
 ```text
 Prompt (L4):
 

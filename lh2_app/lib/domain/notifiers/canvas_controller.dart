@@ -4,7 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'workspace_controller.dart';
 
-/// Controller providing canvas viewport and visible objects for the active tab.
+/// Legacy CanvasController for backward compatibility
+/// This maintains the original interface expected by existing code
 class CanvasController {
   CanvasController(this.ref);
 
