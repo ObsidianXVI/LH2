@@ -251,9 +251,10 @@ class _FlowCanvasViewState extends ConsumerState<FlowCanvasView> {
   }
 
   void _handleItemDragStart(String itemId, DragStartDetails details) {
-    // No-op for now.
-    // Dragging is handled incrementally in _handleItemDragUpdate using
-    // DragUpdateDetails.delta for smooth realtime movement.
+    // Close the info popup immediately when dragging starts
+    ref.read(infoPopupControllerProvider.notifier).close();
+    _hoverCloseTimer?.cancel();
+    _hoverCloseTimer = null;
   }
 
   void _handleItemDragUpdate(String itemId, DragUpdateDetails details) {
