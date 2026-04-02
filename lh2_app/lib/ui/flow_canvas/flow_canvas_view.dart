@@ -243,7 +243,21 @@ class _FlowCanvasViewState extends ConsumerState<FlowCanvasView> {
   // Interaction handlers
 
   void _handleTapUp(TapUpDetails details) {
-    if (widget.controller.selection.isNotEmpty) {
+    // Only clear selection if we tapped the actual background,
+    // not just the widget area (which includes items).
+    // In Flutter, onTapUp on a parent background detector often triggers 
+    // even if a child detector also triggered, unless we hit-test.
+    
+    final worldPos = widget.controller.screenToWorld(details.localPosition);
+    bool hitItem = false;
+    for (final item in widget.controller.items.values) {
+      if (item.worldRect.contains(worldPos)) {
+        hitItem = true;
+        break;
+      }
+    }
+
+    if (!hitItem && widget.controller.selection.isNotEmpty) {
       widget.controller.setSelection({});
     }
   }
@@ -263,7 +277,7 @@ class _FlowCanvasViewState extends ConsumerState<FlowCanvasView> {
             .isLogicalKeyPressed(LogicalKeyboardKey.controlRight);
 
     final bool isMultiSelectModifier =
-        isShiftPressed && (isMetaPressed || isControlPressed);
+        isShiftPressed || isMetaPressed || isControlPressed;
 
     if (isMultiSelectModifier) {
       final newSelection = Set<String>.from(widget.controller.selection);
