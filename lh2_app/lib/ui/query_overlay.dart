@@ -111,7 +111,7 @@ class _QueryOverlayState extends ConsumerState<QueryOverlay> {
                             child: Padding(
                               padding: EdgeInsets.all(LH2Theme.spacing(2)),
                               child: Text(
-                                result,
+                                result.toString(),
                                 style: LH2Theme.body.copyWith(
                                   fontSize: 14,
                                 ),
