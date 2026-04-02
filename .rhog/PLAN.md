@@ -532,6 +532,8 @@ Wire:
 
 ###### Task 1.2.2-1: Accept-any-text placeholder parser (no grammar yet) [L3]
 
+*DONE*
+
 ```text
 Prompt (L3):
 
@@ -550,6 +552,8 @@ Integrate with QueryOverlay: on Enter -> parse + evaluate.
 ##### 1.2.3: Query Filters
 
 ###### Task 1.2.3-1: “Hide results in view” toggle [L4]
+
+*DONE*
 
 ```text
 Prompt (L4):

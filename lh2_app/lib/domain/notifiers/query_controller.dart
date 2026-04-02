@@ -5,6 +5,7 @@
 library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'canvas_controller.dart';
 
 /// Reference to an LH2 object for search results.
 class LH2ObjectRef {
@@ -59,22 +60,26 @@ class QueryState {
   final List<LH2ObjectRef> results;
   final bool isLoading;
   final String? lastQuery;
+  final bool hideResultsInView;
 
   const QueryState({
     this.results = const <LH2ObjectRef>[],
     this.isLoading = false,
     this.lastQuery,
+    this.hideResultsInView = false,
   });
 
   QueryState copyWith({
     List<LH2ObjectRef>? results,
     bool? isLoading,
     String? lastQuery,
+    bool? hideResultsInView,
   }) {
     return QueryState(
       results: results ?? this.results,
       isLoading: isLoading ?? this.isLoading,
       lastQuery: lastQuery ?? this.lastQuery,
+      hideResultsInView: hideResultsInView ?? this.hideResultsInView,
     );
   }
 }
@@ -94,10 +99,17 @@ class QueryController extends Notifier<QueryState> {
     state = state.copyWith(isLoading: true, lastQuery: query);
 
     final ast = parseQuery(query);
-    final results = await evaluateQuery(ast);
+    final rawResults = await evaluateQuery(ast);
+
+    final canvasCtrl = ref.read(activeCanvasControllerProvider);
+    List<LH2ObjectRef> filteredResults = rawResults;
+    if (state.hideResultsInView) {
+      final visibleIds = canvasCtrl.visibleObjectIds;
+      filteredResults = rawResults.where((r) => !visibleIds.contains(r.id)).toList();
+    }
 
     state = state.copyWith(
-      results: results,
+      results: filteredResults,
       isLoading: false,
       lastQuery: query,
     );
@@ -106,6 +118,11 @@ class QueryController extends Notifier<QueryState> {
   /// Clears results.
   void clear() {
     state = const QueryState();
+  }
+
+  /// Sets whether to hide results already in view.
+  void setHideResultsInView(bool value) {
+    state = state.copyWith(hideResultsInView: value);
   }
 }
 

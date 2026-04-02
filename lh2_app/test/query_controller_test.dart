@@ -1,6 +1,16 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lh2_app/domain/notifiers/query_controller.dart';
+import 'package:lh2_app/domain/notifiers/canvas_controller.dart';
+
+class MockCanvasController extends CanvasController {
+  final Set<String> mockVisibleObjectIds;
+
+  MockCanvasController(this.mockVisibleObjectIds, super.ref);
+
+  @override
+  Set<String> get visibleObjectIds => mockVisibleObjectIds;
+}
 
 void main() {
   group('QueryAst', () {
@@ -176,6 +186,43 @@ void main() {
       expect(state.results, isEmpty);
       expect(state.isLoading, isFalse);
       expect(state.lastQuery, isNull);
+    });
+  });
+
+  group('QueryController hide results filter', () {
+    late ProviderContainer container;
+
+    setUp(() {
+      container = ProviderContainer(
+        overrides: [
+          activeCanvasControllerProvider.overrideWith((ref) =>
+              MockCanvasController({'pg-1', 'p-1'}, ref)),
+        ],
+      );
+    });
+
+    tearDown(() {
+      container.dispose();
+    });
+
+    test('does not filter when disabled', () async {
+      final controller = container.read(queryControllerProvider.notifier);
+      controller.setHideResultsInView(false);
+      await controller.runQuery('project');
+      final state = container.read(queryControllerProvider);
+      expect(state.results.length, 4);
+    });
+
+    test('filters out visible objects when enabled', () async {
+      final controller = container.read(queryControllerProvider.notifier);
+      controller.setHideResultsInView(true);
+      await controller.runQuery('project');
+      final state = container.read(queryControllerProvider);
+      expect(state.results.length, 2);
+      expect(state.results.any((r) => r.id == 'pg-1'), isFalse);
+      expect(state.results.any((r) => r.id == 'p-1'), isFalse);
+      expect(state.results.any((r) => r.id == 'pg-2'), isTrue);
+      expect(state.results.any((r) => r.id == 'p-2'), isTrue);
     });
   });
 }
