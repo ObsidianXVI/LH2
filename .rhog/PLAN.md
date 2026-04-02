@@ -655,6 +655,8 @@ Expose these UI components:
 
 ###### Task 2.3.1-1: Context menu with "Add Node" → type → template [L4]
 
+*DONE*
+
 ```text
 Prompt (L4):
 
@@ -682,6 +684,8 @@ UI:
 ##### 2.4.1: Viewing Information
 
 ###### Task 2.4.1-1: Info popup view/edit with Save/Cancel and Enter/Esc [L4]
+
+*DONE*
 
 ```text
 Prompt (L4):

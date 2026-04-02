@@ -6,6 +6,7 @@ import 'package:lh2_app/domain/notifiers/canvas_controller_impl.dart';
 import '../../ui/theme/tokens.dart';
 import 'grid_background_painter.dart';
 import 'demo_items.dart';
+import 'canvas_context_menu.dart';
 
 /// Flow Canvas widget that renders an infinite scroll canvas with grid background,
 /// pan/zoom interactions, and draggable items.
@@ -25,6 +26,7 @@ class _FlowCanvasViewState extends ConsumerState<FlowCanvasView> {
   late Offset _lastPanPosition;
   bool _isPanning = false;
   final Set<String> _selectedItems = {};
+  OverlayEntry? _contextMenuOverlay;
 
   @override
   void initState() {
@@ -35,6 +37,7 @@ class _FlowCanvasViewState extends ConsumerState<FlowCanvasView> {
   @override
   void dispose() {
     widget.controller.removeListener(_onControllerChanged);
+    _removeContextMenu();
     super.dispose();
   }
 
@@ -53,12 +56,10 @@ class _FlowCanvasViewState extends ConsumerState<FlowCanvasView> {
         _updateViewportSize(viewportSize);
 
         return GestureDetector(
-          onPanStart: _handlePanStart,
-          onPanUpdate: _handlePanUpdate,
-          onPanEnd: _handlePanEnd,
-          onTapUp: _handleTapUp,
           onScaleStart: _handleScaleStart,
           onScaleUpdate: _handleScaleUpdate,
+          onTapUp: _handleTapUp,
+          onSecondaryTapUp: _handleRightClick,
           child: MouseRegion(
             cursor: _isPanning ? SystemMouseCursors.grabbing : SystemMouseCursors.basic,
             child: Stack(
@@ -226,11 +227,16 @@ class _FlowCanvasViewState extends ConsumerState<FlowCanvasView> {
   }
 
   void _handleScaleStart(ScaleStartDetails details) {
-    // Handle scale start for pinch-to-zoom
+    _lastPanPosition = details.localFocalPoint;
   }
 
   void _handleScaleUpdate(ScaleUpdateDetails details) {
-    // Handle scale update for pinch-to-zoom
+    // Handle panning
+    if (details.scale == 1.0 && details.focalPointDelta != Offset.zero) {
+      _panBy(details.focalPointDelta);
+    }
+    
+    // Handle zooming
     if (details.scale != 1.0) {
       _zoomAt(details.localFocalPoint, details.scale);
     }
@@ -242,6 +248,36 @@ class _FlowCanvasViewState extends ConsumerState<FlowCanvasView> {
     for (final demoItem in DemoCanvasItems.demoItems) {
       widget.controller.addItem(demoItem);
     }
+  }
+
+  void _handleRightClick(TapUpDetails details) {
+    // Remove any existing context menu
+    _removeContextMenu();
+
+    // Convert screen position to world position for node placement
+    final worldPosition = widget.controller.screenToWorld(details.localPosition);
+
+    // Get workspace and tab IDs (these would come from providers in a real app)
+    final workspaceId = 'demo-workspace'; // TODO: Get from provider
+    final tabId = 'demo-tab'; // TODO: Get from provider
+
+    // Create and show context menu
+    _contextMenuOverlay = OverlayEntry(
+      builder: (context) => CanvasContextMenu(
+        position: details.globalPosition,
+        worldPosition: worldPosition,
+        workspaceId: workspaceId,
+        tabId: tabId,
+        onDismiss: _removeContextMenu,
+      ),
+    );
+
+    Overlay.of(context).insert(_contextMenuOverlay!);
+  }
+
+  void _removeContextMenu() {
+    _contextMenuOverlay?.remove();
+    _contextMenuOverlay = null;
   }
 
   void _panBy(Offset deltaScreen) {
