@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lh2_app/domain/operations/core.dart';
+import 'package:flutter/services.dart';
 
 import 'providers.dart';
 import 'theme.dart';
@@ -16,7 +17,8 @@ class HyperpanelScaffold extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final workspaceState = ref.watch(workspaceControllerProvider);
     final activeTabId = workspaceState.activeTabId;
-    final tabs = workspaceState.tabs.map((t) => (t.tabId, t.tab.title)).toList();
+    final tabs =
+        workspaceState.tabs.map((t) => (t.tabId, t.tab.title)).toList();
     final hovered = ref.watch(tabBarHoveredProvider);
 
     void showCreateTabMenu() {
@@ -100,8 +102,9 @@ class HyperpanelScaffold extends ConsumerWidget {
                 tabs: tabs.map((t) => TabMeta(id: t.$1, title: t.$2)).toList(),
                 activeTabId: activeTabId,
                 hovered: hovered,
-                onSelect: (id) =>
-                    ref.read(workspaceControllerProvider.notifier).setActiveTab(id),
+                onSelect: (id) => ref
+                    .read(workspaceControllerProvider.notifier)
+                    .setActiveTab(id),
                 onCreateTab: showCreateTabMenu,
               ),
             ),
@@ -205,29 +208,128 @@ class TabButton extends StatelessWidget {
           color: isActive ? LH2Colors.selectionBlue.withOpacity(0.2) : null,
           borderRadius: BorderRadius.circular(LH2Theme.spacing(0.5)),
         ),
-        child: TabLabel(tab: tab, isActive: isActive),
+        child: EditableTabLabel(tab: tab, isActive: isActive),
       ),
     );
   }
 }
 
-/// Tab label.
-class TabLabel extends StatelessWidget {
+class EditableTabLabel extends ConsumerStatefulWidget {
   final TabMeta tab;
   final bool isActive;
-  const TabLabel({
+  const EditableTabLabel({
     super.key,
     required this.tab,
     required this.isActive,
   });
 
   @override
+  ConsumerState<EditableTabLabel> createState() => _EditableTabLabelState();
+}
+
+class _EditableTabLabelState extends ConsumerState<EditableTabLabel> {
+  bool _editing = false;
+  late final TextEditingController _controller;
+  late final FocusNode _focusNode;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController();
+    _focusNode = FocusNode();
+    _focusNode.addListener(_onFocusChange);
+  }
+
+  @override
+  void dispose() {
+    _focusNode.removeListener(_onFocusChange);
+    _controller.dispose();
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  void _onFocusChange() {
+    if (!_focusNode.hasFocus && _editing) {
+      _commit();
+    }
+  }
+
+  void _startEditing() {
+    setState(() {
+      _editing = true;
+    });
+    _controller.text = widget.tab.title;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _focusNode.requestFocus();
+    });
+  }
+
+  void _commit() {
+    final newTitle = _controller.text.trim();
+    if (newTitle.isNotEmpty && newTitle != widget.tab.title) {
+      ref
+          .read(workspaceControllerProvider.notifier)
+          .renameTab(widget.tab.id, newTitle);
+    }
+    setState(() {
+      _editing = false;
+    });
+  }
+
+  void _cancel() {
+    setState(() {
+      _editing = false;
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Text(
-      tab.title,
-      style: LH2Theme.tabLabel.copyWith(
-        color: LH2Colors.textPrimary,
-        fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+    if (!_editing) {
+      return GestureDetector(
+        onDoubleTap: _startEditing,
+        child: Text(
+          widget.tab.title,
+          style: LH2Theme.tabLabel.copyWith(
+            color: LH2Colors.textPrimary,
+            fontWeight: widget.isActive ? FontWeight.bold : FontWeight.normal,
+          ),
+        ),
+      );
+    }
+
+    return Shortcuts(
+      shortcuts: <ShortcutActivator, Intent>{
+        const SingleActivator(LogicalKeyboardKey.escape): const DismissIntent(),
+      },
+      child: Actions(
+        actions: <Type, Action<Intent>>{
+          DismissIntent: CallbackAction<DismissIntent>(
+            onInvoke: (intent) => _cancel(),
+          ),
+        },
+        child: SizedBox(
+          width: 120, // Give TextField a fixed width during edit to avoid layout issues
+          child: TextField(
+            controller: _controller,
+            focusNode: _focusNode,
+            autofocus: true,
+            style: LH2Theme.tabLabel.copyWith(
+              color: LH2Colors.textPrimary,
+              fontWeight: widget.isActive ? FontWeight.bold : FontWeight.normal,
+              backgroundColor: Colors.transparent,
+            ),
+            decoration: const InputDecoration(
+              border: UnderlineInputBorder(
+                borderSide: BorderSide(color: Colors.grey, width: 1.0),
+              ),
+              contentPadding: EdgeInsets.zero,
+              isDense: true,
+              isCollapsed: true,
+            ),
+            onSubmitted: (_) => _commit(),
+            textInputAction: TextInputAction.done,
+          ),
+        ),
       ),
     );
   }

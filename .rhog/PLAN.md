@@ -440,6 +440,8 @@ State:
 
 ###### Task 1.1.2-1: Create tab via right-click menu (Flow vs Calendar) [L2]
 
+*DONE*
+
 ```text
 Prompt (L2):
 
@@ -460,6 +462,8 @@ Implement:
 ##### 1.1.3: Tab Renaming
 
 ###### Task 1.1.3-1: In-place rename (double click, save on Enter) [L2]
+
+*DONE*
 
 ```text
 Prompt (L2):

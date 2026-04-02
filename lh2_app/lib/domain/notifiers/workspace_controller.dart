@@ -4,6 +4,7 @@
 /// UI should not directly call Firestore - all mutations go through operations.
 library;
 
+import 'package:collection/collection.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lh2_stub/lh2_stub.dart';
 
@@ -303,6 +304,86 @@ class WorkspaceController extends Notifier<WorkspaceState> {
   /// Sets the active tab by ID.
   void setActiveTab(String tabId) {
     state = state.copyWith(activeTabId: tabId);
+  }
+
+  /// Renames a tab title and persists the change to Firestore.
+  ///
+  /// Throws [LH2OpError] on validation or precondition failure.
+  /// Reverts optimistic update and sets [lastError] on persistence failure.
+  Future<void> renameTab(String tabId, String newTitle) async {
+    final trimmedTitle = newTitle.trim();
+    if (trimmedTitle.isEmpty || trimmedTitle.length < 2) {
+      throw LH2OpError(
+        operationId: 'workspace.renameTab',
+        errorCode: 'INVALID_TITLE',
+        message: 'Tab title must be 2+ characters long.',
+        payload: {'tabId': tabId, 'newTitle': newTitle},
+        isFatal: false,
+      );
+    }
+
+    if (state.workspaceId.isEmpty) {
+      throw LH2OpError(
+        operationId: 'workspace.renameTab',
+        errorCode: LH2ErrorCodes.preconditionFailed,
+        message: 'No workspace loaded.',
+        isFatal: true,
+      );
+    }
+
+    final oldEntry = state.tabs.firstWhereOrNull((t) => t.tabId == tabId);
+    if (oldEntry == null) {
+      throw LH2OpError(
+        operationId: 'workspace.renameTab',
+        errorCode: LH2ErrorCodes.notFound,
+        message: 'Tab $tabId not found.',
+        isFatal: true,
+      );
+    }
+
+    final oldTitle = oldEntry.tab.title;
+    final idx = state.tabs.indexWhere((t) => t.tabId == tabId);
+
+    // Optimistic update
+    final newTab = WorkspaceTab(
+      schemaVersion: oldEntry.tab.schemaVersion,
+      kind: oldEntry.tab.kind,
+      title: trimmedTitle,
+      controller: oldEntry.tab.controller,
+      items: oldEntry.tab.items,
+      links: oldEntry.tab.links,
+    );
+    final newTabs = List<WorkspaceTabEntry>.from(state.tabs);
+    newTabs[idx] = WorkspaceTabEntry(tabId: tabId, tab: newTab);
+    state = state.copyWith(tabs: newTabs);
+
+    // Persist to Firestore
+    final repo = ref.read(workspaceRepoProvider);
+    try {
+      await repo.updateTab(state.workspaceId, tabId, WorkspaceTabPatch(title: trimmedTitle));
+    } catch (e) {
+      // Revert on failure
+      final revertedTab = WorkspaceTab(
+        schemaVersion: oldEntry.tab.schemaVersion,
+        kind: oldEntry.tab.kind,
+        title: oldTitle,
+        controller: oldEntry.tab.controller,
+        items: oldEntry.tab.items,
+        links: oldEntry.tab.links,
+      );
+      final revertedTabs = List<WorkspaceTabEntry>.from(state.tabs);
+      revertedTabs[idx] = WorkspaceTabEntry(tabId: tabId, tab: revertedTab);
+      state = state.copyWith(
+        tabs: revertedTabs,
+        lastError: LH2OpError(
+          operationId: 'workspace.renameTab',
+          errorCode: 'PERSISTENCE_FAILED',
+          message: 'Failed to save tab rename: ${e.toString()}',
+          isFatal: false,
+        ),
+      );
+      rethrow;
+    }
   }
 
   /// Clears the last error.
