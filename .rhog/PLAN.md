@@ -738,6 +738,8 @@ Requirements:
 
 ###### Task 2.4.3-1: Information overlay on hover and Crosshair overlay side panel [L4]
 
+*DONE*
+
 ```text
 Prompt (L4):
 

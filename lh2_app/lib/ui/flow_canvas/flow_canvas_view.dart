@@ -34,7 +34,6 @@ class FlowCanvasView extends ConsumerStatefulWidget {
 }
 
 class _FlowCanvasViewState extends ConsumerState<FlowCanvasView> {
-  final Set<String> _selectedItems = {};
   OverlayEntry? _contextMenuOverlay;
   String? _hoveredItemId;
   Timer? _hoverCloseTimer;
@@ -171,6 +170,7 @@ class _FlowCanvasViewState extends ConsumerState<FlowCanvasView> {
 
   Widget _buildCanvasItem(String itemId, CanvasItem item) {
     final screenRect = _worldRectToScreen(item.worldRect);
+    final isSelected = widget.controller.selection.contains(itemId);
 
     return Positioned(
       left: screenRect.left,
@@ -185,10 +185,8 @@ class _FlowCanvasViewState extends ConsumerState<FlowCanvasView> {
           decoration: BoxDecoration(
             color: LH2Colors.panel,
             border: Border.all(
-              color: _selectedItems.contains(itemId)
-                  ? LH2Colors.selectionBlue
-                  : LH2Colors.border,
-              width: _selectedItems.contains(itemId) ? 2.0 : 1.0,
+              color: isSelected ? LH2Colors.selectionBlue : LH2Colors.border,
+              width: isSelected ? 2.0 : 1.0,
             ),
             borderRadius: BorderRadius.circular(4),
           ),
@@ -215,31 +213,41 @@ class _FlowCanvasViewState extends ConsumerState<FlowCanvasView> {
 
   void _handleTapUp(TapUpDetails details) {
     // Clear selection when clicking on empty space
-    if (_selectedItems.isNotEmpty) {
-      setState(() {
-        _selectedItems.clear();
-      });
+    if (widget.controller.selection.isNotEmpty) {
       widget.controller.setSelection({});
     }
   }
 
   void _handleItemTap(String itemId) {
-    setState(() {
-      if (HardwareKeyboard.instance.isShiftPressed &&
-          HardwareKeyboard.instance.isControlPressed) {
-        // Cmd+Shift+Select for multi-selection
-        if (_selectedItems.contains(itemId)) {
-          _selectedItems.remove(itemId);
-        } else {
-          _selectedItems.add(itemId);
-        }
+    final bool isShiftPressed = HardwareKeyboard.instance
+            .isLogicalKeyPressed(LogicalKeyboardKey.shiftLeft) ||
+        HardwareKeyboard.instance
+            .isLogicalKeyPressed(LogicalKeyboardKey.shiftRight);
+    final bool isMetaPressed = HardwareKeyboard.instance
+            .isLogicalKeyPressed(LogicalKeyboardKey.metaLeft) ||
+        HardwareKeyboard.instance
+            .isLogicalKeyPressed(LogicalKeyboardKey.metaRight);
+    final bool isControlPressed = HardwareKeyboard.instance
+            .isLogicalKeyPressed(LogicalKeyboardKey.controlLeft) ||
+        HardwareKeyboard.instance
+            .isLogicalKeyPressed(LogicalKeyboardKey.controlRight);
+
+    final bool isMultiSelectModifier =
+        isShiftPressed && (isMetaPressed || isControlPressed);
+
+    if (isMultiSelectModifier) {
+      // Cmd+Shift+Select for multi-selection toggle
+      final newSelection = Set<String>.from(widget.controller.selection);
+      if (newSelection.contains(itemId)) {
+        newSelection.remove(itemId);
       } else {
-        // Single selection
-        _selectedItems.clear();
-        _selectedItems.add(itemId);
+        newSelection.add(itemId);
       }
-    });
-    widget.controller.setSelection(_selectedItems);
+      widget.controller.setSelection(newSelection);
+    } else {
+      // Single selection
+      widget.controller.setSelection({itemId});
+    }
   }
 
   void _handleItemDragStart(String itemId, DragStartDetails details) {
@@ -360,6 +368,21 @@ class _FlowCanvasViewState extends ConsumerState<FlowCanvasView> {
       return;
     }
 
+    // If the right-click is over a node, and that node isn't selected,
+    // select it first (exclusive selection unless modifiers are used, 
+    // but right-click usually implies context for what's under it).
+    String? hitItemId;
+    for (final entry in widget.controller.items.entries.toList().reversed) {
+      if (entry.value.worldRect.contains(worldPosition)) {
+        hitItemId = entry.key;
+        break;
+      }
+    }
+
+    if (hitItemId != null && !widget.controller.selection.contains(hitItemId)) {
+      widget.controller.setSelection({hitItemId});
+    }
+
     // Create and show context menu
     _contextMenuOverlay = OverlayEntry(
       builder: (context) => CanvasContextMenu(
@@ -367,6 +390,8 @@ class _FlowCanvasViewState extends ConsumerState<FlowCanvasView> {
         worldPosition: worldPosition,
         workspaceId: workspaceId,
         tabId: tabId,
+        selection: Set.from(widget.controller.selection),
+        controller: widget.controller,
         onDismiss: _removeContextMenu,
       ),
     );

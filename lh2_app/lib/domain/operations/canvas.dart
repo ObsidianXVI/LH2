@@ -263,3 +263,99 @@ final canvasUpdateViewportOpProvider = Provider<CanvasUpdateViewportOp>((ref) {
   final repo = ref.watch(workspaceRepoProvider);
   return CanvasUpdateViewportOp(repo);
 });
+
+// ============================================================================
+// api.canvas.removeItems
+// ============================================================================
+
+/// Input for [CanvasRemoveItemsOp].
+class CanvasRemoveItemsInput {
+  final String workspaceId;
+  final String tabId;
+  final List<String> itemIds;
+
+  const CanvasRemoveItemsInput({
+    required this.workspaceId,
+    required this.tabId,
+    required this.itemIds,
+  });
+
+  Map<String, Object?> toJson() => {
+        'workspaceId': workspaceId,
+        'tabId': tabId,
+        'itemIds': itemIds,
+      };
+}
+
+/// Output for [CanvasRemoveItemsOp].
+class CanvasRemoveItemsOutput {
+  final bool success;
+
+  const CanvasRemoveItemsOutput({required this.success});
+
+  Map<String, Object?> toJson() => {'success': success};
+}
+
+/// Removes items from the canvas.
+///
+/// Operation ID: api.canvas.removeItems
+class CanvasRemoveItemsOp
+    extends LH2Operation<CanvasRemoveItemsInput, CanvasRemoveItemsOutput> {
+  final WorkspaceRepository _repo;
+
+  CanvasRemoveItemsOp(this._repo);
+
+  @override
+  String get operationId => 'api.canvas.removeItems';
+
+  @override
+  Future<LH2OpResult<CanvasRemoveItemsOutput>> execute(
+    CanvasRemoveItemsInput input,
+  ) async {
+    try {
+      if (input.workspaceId.isEmpty || input.tabId.isEmpty) {
+        return LH2OpResult.error(
+          createError(
+            errorCode: LH2ErrorCodes.invalidInput,
+            message: 'workspaceId and tabId are required',
+            payload: input.toJson(),
+            isFatal: false,
+          ),
+        );
+      }
+
+      // Get current tab to filter items
+      final currentTab = await _repo.getTab(input.workspaceId, input.tabId);
+
+      // Filter out removed items
+      final updatedItems = Map<String, Object?>.from(currentTab.items);
+      for (final itemId in input.itemIds) {
+        updatedItems.remove(itemId);
+      }
+
+      await _repo.updateTab(
+        input.workspaceId,
+        input.tabId,
+        WorkspaceTabPatch(items: updatedItems),
+      );
+
+      return LH2OpResult.ok(const CanvasRemoveItemsOutput(success: true));
+    } catch (e) {
+      return LH2OpResult.error(
+        createError(
+          errorCode: LH2ErrorCodes.databaseError,
+          message: 'Failed to remove canvas items: ${e.toString()}',
+          payload: input.toJson(),
+          cause: e,
+          isFatal: true,
+        ),
+      );
+    }
+  }
+}
+
+/// Provider for [CanvasRemoveItemsOp].
+final canvasRemoveItemsOpProvider = Provider<CanvasRemoveItemsOp>((ref) {
+  final repo = ref.watch(workspaceRepoProvider);
+  return CanvasRemoveItemsOp(repo);
+});
