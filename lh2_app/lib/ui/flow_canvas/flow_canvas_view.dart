@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lh2_app/domain/notifiers/canvas_controller_impl.dart';
@@ -25,8 +26,6 @@ class FlowCanvasView extends ConsumerStatefulWidget {
 }
 
 class _FlowCanvasViewState extends ConsumerState<FlowCanvasView> {
-  late Offset _lastPanPosition;
-  bool _isPanning = false;
   final Set<String> _selectedItems = {};
   OverlayEntry? _contextMenuOverlay;
 
@@ -57,46 +56,54 @@ class _FlowCanvasViewState extends ConsumerState<FlowCanvasView> {
         final viewportSize = Size(constraints.maxWidth, constraints.maxHeight);
         _updateViewportSize(viewportSize);
 
-        return GestureDetector(
-          onScaleStart: _handleScaleStart,
-          onScaleUpdate: _handleScaleUpdate,
-          onTapUp: _handleTapUp,
-          onSecondaryTapUp: _handleRightClick,
-          child: MouseRegion(
-            cursor: _isPanning ? SystemMouseCursors.grabbing : SystemMouseCursors.basic,
-            child: Stack(
-              children: [
-                // Grid background
-                CustomPaint(
-                  painter: GridBackgroundPainter(
-                    pan: widget.controller.viewport.pan,
-                    zoom: widget.controller.viewport.zoom,
-                    gridSizePx: widget.controller.gridSizePx,
-                    viewportSize: viewportSize,
+        return Listener(
+          onPointerSignal: (PointerSignalEvent event) {
+            if (event is PointerScrollEvent) {
+              // Two-finger scroll panning
+              widget.controller.panBy(event.scrollDelta);
+            }
+          },
+          child: GestureDetector(
+            onScaleStart: _handleScaleStart,
+            onScaleUpdate: _handleScaleUpdate,
+            onTapUp: _handleTapUp,
+            onSecondaryTapUp: _handleRightClick,
+            child: MouseRegion(
+              cursor: SystemMouseCursors.basic,
+              child: Stack(
+                children: [
+                  // Grid background
+                  CustomPaint(
+                    painter: GridBackgroundPainter(
+                      pan: widget.controller.viewport.pan,
+                      zoom: widget.controller.viewport.zoom,
+                      gridSizePx: widget.controller.gridSizePx,
+                      viewportSize: viewportSize,
+                    ),
+                    size: viewportSize,
                   ),
-                  size: viewportSize,
-                ),
-                
-                // Canvas items layer
-                _buildItemsLayer(),
-                
-                // Selection overlay
-                _buildSelectionOverlay(),
 
-                // Information Popup
-                const InfoPopupOverlay(),
-                
-                // Add demo items button
-                Positioned(
-                  right: 16,
-                  bottom: 16,
-                  child: FloatingActionButton(
-                    onPressed: _addDemoItems,
-                    backgroundColor: LH2Colors.accentBlue,
-                    child: const Icon(Icons.add, color: Colors.white),
+                  // Canvas items layer
+                  _buildItemsLayer(),
+
+                  // Selection overlay
+                  _buildSelectionOverlay(),
+
+                  // Information Popup
+                  const InfoPopupOverlay(),
+
+                  // Add demo items button
+                  Positioned(
+                    right: 16,
+                    bottom: 16,
+                    child: FloatingActionButton(
+                      onPressed: _addDemoItems,
+                      backgroundColor: LH2Colors.accentBlue,
+                      child: const Icon(Icons.add, color: Colors.white),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         );
@@ -123,7 +130,7 @@ class _FlowCanvasViewState extends ConsumerState<FlowCanvasView> {
 
   Widget _buildCanvasItem(String itemId, CanvasItem item) {
     final screenRect = _worldRectToScreen(item.worldRect);
-    
+
     return Positioned(
       left: screenRect.left,
       top: screenRect.top,
@@ -137,8 +144,8 @@ class _FlowCanvasViewState extends ConsumerState<FlowCanvasView> {
           decoration: BoxDecoration(
             color: LH2Colors.panel,
             border: Border.all(
-              color: _selectedItems.contains(itemId) 
-                  ? LH2Colors.selectionBlue 
+              color: _selectedItems.contains(itemId)
+                  ? LH2Colors.selectionBlue
                   : LH2Colors.border,
               width: _selectedItems.contains(itemId) ? 2.0 : 1.0,
             ),
@@ -164,29 +171,6 @@ class _FlowCanvasViewState extends ConsumerState<FlowCanvasView> {
   }
 
   // Interaction handlers
-  void _handlePanStart(DragStartDetails details) {
-    setState(() {
-      _isPanning = true;
-      _lastPanPosition = details.localPosition;
-    });
-  }
-
-  void _handlePanUpdate(DragUpdateDetails details) {
-    if (!_isPanning) return;
-    
-    final delta = details.localPosition - _lastPanPosition;
-    _panBy(delta);
-    
-    setState(() {
-      _lastPanPosition = details.localPosition;
-    });
-  }
-
-  void _handlePanEnd(DragEndDetails details) {
-    setState(() {
-      _isPanning = false;
-    });
-  }
 
   void _handleTapUp(TapUpDetails details) {
     // Clear selection when clicking on empty space
@@ -217,30 +201,33 @@ class _FlowCanvasViewState extends ConsumerState<FlowCanvasView> {
     widget.controller.setSelection(_selectedItems);
   }
 
+  late Offset _itemDragStartWorld;
+  late Rect _itemOriginalRect;
+
   void _handleItemDragStart(String itemId, DragStartDetails details) {
-    // Could implement drag start logic here
+    final item = widget.controller.items[itemId];
+    if (item != null) {
+      _itemDragStartWorld = widget.controller.screenToWorld(details.localPosition);
+      _itemOriginalRect = item.worldRect;
+    }
   }
 
   void _handleItemDragUpdate(String itemId, DragUpdateDetails details) {
-    final deltaWorld = details.delta / widget.controller.viewport.zoom;
+    final currentWorld = widget.controller.screenToWorld(details.localPosition);
+    final deltaWorld = currentWorld - _itemDragStartWorld;
     final item = widget.controller.items[itemId];
-    
+
     if (item != null) {
-      final newRect = item.worldRect.shift(deltaWorld);
+      final newRect = _itemOriginalRect.shift(deltaWorld);
       widget.controller.updateItemRect(itemId, newRect);
     }
   }
 
   void _handleScaleStart(ScaleStartDetails details) {
-    _lastPanPosition = details.localFocalPoint;
+    // Scale start logic
   }
 
   void _handleScaleUpdate(ScaleUpdateDetails details) {
-    // Handle panning
-    if (details.scale == 1.0 && details.focalPointDelta != Offset.zero) {
-      _panBy(details.focalPointDelta);
-    }
-    
     // Handle zooming
     if (details.scale != 1.0) {
       _zoomAt(details.localFocalPoint, details.scale);
@@ -260,7 +247,8 @@ class _FlowCanvasViewState extends ConsumerState<FlowCanvasView> {
     _removeContextMenu();
 
     // Convert screen position to world position for node placement
-    final worldPosition = widget.controller.screenToWorld(details.localPosition);
+    final worldPosition =
+        widget.controller.screenToWorld(details.localPosition);
 
     // Get real workspace and tab IDs from the workspace controller
     final workspaceState = ref.read(workspaceControllerProvider);
@@ -291,10 +279,6 @@ class _FlowCanvasViewState extends ConsumerState<FlowCanvasView> {
     _contextMenuOverlay = null;
   }
 
-  void _panBy(Offset deltaScreen) {
-    widget.controller.panBy(deltaScreen);
-  }
-
   void _zoomAt(Offset focalScreen, double scaleDelta) {
     widget.controller.zoomAt(focalScreen: focalScreen, scaleDelta: scaleDelta);
   }
@@ -302,7 +286,7 @@ class _FlowCanvasViewState extends ConsumerState<FlowCanvasView> {
   Rect _worldRectToScreen(Rect worldRect) {
     final topLeft = _worldToScreen(worldRect.topLeft);
     final bottomRight = _worldToScreen(worldRect.bottomRight);
-    
+
     return Rect.fromPoints(topLeft, bottomRight);
   }
 
