@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lh2_app/domain/notifiers/canvas_controller_impl.dart';
+import 'package:lh2_app/domain/notifiers/workspace_controller.dart';
 
 import '../../ui/theme/tokens.dart';
 import 'grid_background_painter.dart';
 import 'demo_items.dart';
 import 'canvas_context_menu.dart';
+import '../info_popup_overlay.dart';
 
 /// Flow Canvas widget that renders an infinite scroll canvas with grid background,
 /// pan/zoom interactions, and draggable items.
@@ -80,6 +82,9 @@ class _FlowCanvasViewState extends ConsumerState<FlowCanvasView> {
                 
                 // Selection overlay
                 _buildSelectionOverlay(),
+
+                // Information Popup
+                const InfoPopupOverlay(),
                 
                 // Add demo items button
                 Positioned(
@@ -257,9 +262,15 @@ class _FlowCanvasViewState extends ConsumerState<FlowCanvasView> {
     // Convert screen position to world position for node placement
     final worldPosition = widget.controller.screenToWorld(details.localPosition);
 
-    // Get workspace and tab IDs (these would come from providers in a real app)
-    final workspaceId = 'demo-workspace'; // TODO: Get from provider
-    final tabId = 'demo-tab'; // TODO: Get from provider
+    // Get real workspace and tab IDs from the workspace controller
+    final workspaceState = ref.read(workspaceControllerProvider);
+    final workspaceId = workspaceState.workspaceId;
+    final tabId = workspaceState.activeTabId;
+
+    if (workspaceId.isEmpty || tabId == null) {
+      // Cannot show context menu without a workspace or active tab
+      return;
+    }
 
     // Create and show context menu
     _contextMenuOverlay = OverlayEntry(

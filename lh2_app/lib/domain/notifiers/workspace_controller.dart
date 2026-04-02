@@ -4,6 +4,7 @@
 /// UI should not directly call Firestore - all mutations go through operations.
 library;
 
+import 'dart:async';
 import 'package:collection/collection.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lh2_stub/lh2_stub.dart';
@@ -85,8 +86,13 @@ class WorkspaceState {
 /// }
 /// ```
 class WorkspaceController extends Notifier<WorkspaceState> {
+  StreamSubscription<WorkspaceTab>? _tabSubscription;
+
   @override
   WorkspaceState build() {
+    ref.onDispose(() {
+      _tabSubscription?.cancel();
+    });
     return WorkspaceState(workspaceId: '');
   }
 
@@ -107,13 +113,19 @@ class WorkspaceController extends Notifier<WorkspaceState> {
 
     if (result.ok) {
       final output = result.value!;
+      final activeTabId = output.meta.activeTabId ?? output.tabs.firstOrNull?.tabId;
       state = state.copyWith(
         workspaceId: workspaceId,
         meta: output.meta,
         tabs: output.tabs,
-        activeTabId: output.meta.activeTabId ?? output.tabs.firstOrNull?.tabId,
+        activeTabId: activeTabId,
         isLoading: false,
       );
+
+      if (activeTabId != null) {
+        _subscribeToTab(workspaceId, activeTabId);
+      }
+
       return true;
     } else {
       state = state.copyWith(
@@ -304,6 +316,23 @@ class WorkspaceController extends Notifier<WorkspaceState> {
   /// Sets the active tab by ID.
   void setActiveTab(String tabId) {
     state = state.copyWith(activeTabId: tabId);
+    _subscribeToTab(state.workspaceId, tabId);
+  }
+
+  void _subscribeToTab(String workspaceId, String tabId) {
+    _tabSubscription?.cancel();
+    final repo = ref.read(workspaceRepoProvider);
+    _tabSubscription = repo.watchTab(workspaceId, tabId).listen((tab) {
+      // Update the specific tab in the tabs list
+      final newTabs = state.tabs.map((entry) {
+        if (entry.tabId == tabId) {
+          return WorkspaceTabEntry(tabId: tabId, tab: tab);
+        }
+        return entry;
+      }).toList();
+
+      state = state.copyWith(tabs: newTabs);
+    });
   }
 
   /// Renames a tab title and persists the change to Firestore.

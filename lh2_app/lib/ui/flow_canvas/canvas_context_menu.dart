@@ -4,12 +4,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lh2_app/data/workspace_repository.dart';
 import 'package:lh2_app/domain/operations/canvas.dart';
 import 'package:lh2_app/domain/operations/core.dart';
+import 'package:lh2_app/domain/operations/telemetry.dart';
 import 'package:lh2_stub/lh2_stub.dart';
 
 import '../../app/providers.dart';
 import '../../app/theme.dart';
 import '../../ui/theme/tokens.dart';
+import '../info_popup_overlay.dart';
+import 'canvas_provider.dart';
 import 'demo_providers.dart';
+import '../../domain/notifiers/info_popup_controller.dart';
 
 /// Context menu for the flow canvas with "Add Node" functionality
 class CanvasContextMenu extends ConsumerStatefulWidget {
@@ -213,15 +217,22 @@ class _CanvasContextMenuState extends ConsumerState<CanvasContextMenu> {
             padding: const EdgeInsets.all(16),
             child: const CircularProgressIndicator(),
           ),
-          error: (error, stack) => Container(
-            decoration: BoxDecoration(
-              color: LH2Colors.panel,
-              border: Border.all(color: LH2Colors.border),
-              borderRadius: BorderRadius.circular(4),
-            ),
-            padding: const EdgeInsets.all(16),
-            child: Text('Error loading templates: $error'),
-          ),
+          error: (error, stack) {
+            Telemetry.warn(
+              'ui.canvas.context_menu',
+              'Error loading templates: $error',
+              stackTrace: stack,
+            );
+            return Container(
+              decoration: BoxDecoration(
+                color: LH2Colors.panel,
+                border: Border.all(color: LH2Colors.border),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              padding: const EdgeInsets.all(16),
+              child: Text('Error loading templates: $error'),
+            );
+          },
           data: (templates) {
             if (templates.isEmpty) {
               return Container(
@@ -413,10 +424,32 @@ class _CanvasContextMenuState extends ConsumerState<CanvasContextMenu> {
       final result = await canvasAddItemOp.execute(input);
 
       if (result.ok) {
+        final itemId = result.value!.itemId;
         widget.onDismiss();
 
-        // TODO: Open Information Popup in "Adding Information" mode
-        // This will be implemented when the Information Popup is available
+        // Open Information Popup in "add" mode
+        final controller = ref.read(activeCanvasControllerProvider);
+        if (controller != null) {
+          // Calculate screen rect for the new item to anchor the popup
+          final itemRectWorld = Rect.fromLTWH(
+            worldRect['x'] as double,
+            worldRect['y'] as double,
+            worldRect['w'] as double,
+            worldRect['h'] as double,
+          );
+          
+          final topLeft = controller.worldToScreen(itemRectWorld.topLeft);
+          final bottomRight = controller.worldToScreen(itemRectWorld.bottomRight);
+          final screenRect = Rect.fromPoints(topLeft, bottomRight);
+
+          ref.read(infoPopupControllerProvider.notifier).openAddMode(
+                itemId: itemId,
+                anchorScreenRect: screenRect,
+                objectType: template.objectType,
+                templateId: template.id,
+              );
+        }
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Added ${template.name} node'),
@@ -424,10 +457,28 @@ class _CanvasContextMenuState extends ConsumerState<CanvasContextMenu> {
           ),
         );
       } else {
-        throw result.error ?? Exception('Unknown error');
+        final err = result.error ??
+            LH2OpError(
+              operationId: 'api.canvas.addItem',
+              errorCode: 'UNKNOWN_ERROR',
+              message: 'Unknown error adding node',
+              isFatal: true,
+            );
+        throw err;
       }
     } catch (e) {
       widget.onDismiss();
+
+      if (e is LH2OpError) {
+        Telemetry.error(e);
+      } else {
+        Telemetry.warn(
+          'ui.canvas.context_menu',
+          'Failed to add node: $e',
+          stackTrace: StackTrace.current,
+        );
+      }
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Failed to add node: $e'),

@@ -93,14 +93,22 @@ class CanvasItem {
   });
 
   factory CanvasItem.fromJson(String itemId, Map<String, Object?> json) {
+    final worldRectJson = json['worldRect'] as Map<String, Object?>? ??
+        {
+          'x': json['x'],
+          'y': json['y'],
+          'w': json['w'],
+          'h': json['h'],
+        };
+
     return CanvasItem(
       itemId: itemId,
       itemType: json['itemType'] as String,
       worldRect: Rect.fromLTWH(
-        (json['x'] as num).toDouble(),
-        (json['y'] as num).toDouble(),
-        (json['w'] as num).toDouble(),
-        (json['h'] as num).toDouble(),
+        (worldRectJson['x'] as num).toDouble(),
+        (worldRectJson['y'] as num).toDouble(),
+        (worldRectJson['w'] as num).toDouble(),
+        (worldRectJson['h'] as num).toDouble(),
       ),
       objectId: json['objectId'] as String?,
     );
@@ -109,10 +117,12 @@ class CanvasItem {
   Map<String, Object?> toJson() {
     return {
       'itemType': itemType,
-      'x': worldRect.left,
-      'y': worldRect.top,
-      'w': worldRect.width,
-      'h': worldRect.height,
+      'worldRect': {
+        'x': worldRect.left,
+        'y': worldRect.top,
+        'w': worldRect.width,
+        'h': worldRect.height,
+      },
       if (objectId != null) 'objectId': objectId,
     };
   }
