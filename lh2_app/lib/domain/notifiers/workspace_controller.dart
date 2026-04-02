@@ -386,6 +386,95 @@ class WorkspaceController extends Notifier<WorkspaceState> {
     }
   }
 
+  /// Deletes a tab and persists the change.
+  ///
+  /// Removes tab from state.tabs and meta.tabOrder.
+  /// If active tab deleted, switches to nearest neighbor (prefer next, then prev).
+  /// Reverts optimistic UI update on persistence failure.
+  Future<void> deleteTab(String tabId) async {
+    final wsId = state.workspaceId;
+    if (wsId.isEmpty) {
+      throw LH2OpError(
+        operationId: 'workspace.deleteTab',
+        errorCode: LH2ErrorCodes.preconditionFailed,
+        message: 'No workspace loaded; cannot delete tab.',
+        isFatal: true,
+      );
+    }
+
+    final tabIdx = state.tabs.indexWhere((t) => t.tabId == tabId);
+    if (tabIdx == -1) {
+      throw LH2OpError(
+        operationId: 'workspace.deleteTab',
+        errorCode: LH2ErrorCodes.notFound,
+        message: 'Tab $tabId not found.',
+        isFatal: true,
+      );
+    }
+
+    if (state.meta == null) {
+      throw LH2OpError(
+        operationId: 'workspace.deleteTab',
+        errorCode: 'NO_META',
+        message: 'Workspace meta not loaded.',
+        isFatal: true,
+      );
+    }
+
+    final oldState = state;
+    final meta = state.meta!;
+
+    // Compute new active ID (prefer next neighbor, then prev)
+    String? newActiveId = state.activeTabId;
+    final tabsLength = state.tabs.length;
+    if (state.activeTabId == tabId) {
+      if (tabIdx < tabsLength - 1) {
+        // Prefer next (right)
+        newActiveId = state.tabs[tabIdx + 1].tabId;
+      } else if (tabIdx > 0) {
+        // Then prev (left)
+        newActiveId = state.tabs[tabIdx - 1].tabId;
+      } else {
+        // Single tab
+        newActiveId = null;
+      }
+    }
+
+    // Optimistic UI update
+    final newTabs = state.tabs.where((t) => t.tabId != tabId).toList();
+    state = state.copyWith(
+      tabs: newTabs,
+      activeTabId: newActiveId,
+    );
+
+    final repo = ref.read(workspaceRepoProvider);
+    try {
+      // Persist: update meta (remove from tabOrder, set new active)
+      final newTabOrder = meta.tabOrder.where((id) => id != tabId).toList();
+      final newMeta = WorkspaceMeta(
+        schemaVersion: meta.schemaVersion,
+        ownerUid: meta.ownerUid,
+        activeTabId: newActiveId,
+        tabOrder: newTabOrder,
+      );
+      await repo.upsertWorkspaceMeta(wsId, newMeta);
+
+      // Delete tab document (discards config/state)
+      await repo.deleteTab(wsId, tabId);
+    } catch (e) {
+      // Revert optimistic update
+      state = oldState.copyWith(
+        lastError: LH2OpError(
+          operationId: 'workspace.deleteTab',
+          errorCode: 'PERSISTENCE_FAILED',
+          message: 'Failed to delete tab: ${e.toString()}',
+          isFatal: false,
+        ),
+      );
+      rethrow;
+    }
+  }
+
   /// Clears the last error.
   void clearError() {
     state = state.copyWith(lastError: null);

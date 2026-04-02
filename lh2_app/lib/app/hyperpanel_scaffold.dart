@@ -183,8 +183,7 @@ class TabMeta {
   const TabMeta({required this.id, required this.title});
 }
 
-/// Tab button.
-class TabButton extends StatelessWidget {
+class TabButton extends ConsumerStatefulWidget {
   final TabMeta tab;
   final bool isActive;
   final VoidCallback onTap;
@@ -196,19 +195,50 @@ class TabButton extends StatelessWidget {
   });
 
   @override
+  ConsumerState<TabButton> createState() => _TabButtonState();
+}
+
+class _TabButtonState extends ConsumerState<TabButton> {
+  bool _hovered = false;
+
+  @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      child: Container(
-        padding: EdgeInsets.symmetric(
-          horizontal: LH2Theme.spacing(2),
-          vertical: LH2Theme.spacing(1),
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: InkWell(
+        onTap: widget.onTap,
+        child: Container(
+          padding: EdgeInsets.symmetric(
+            horizontal: LH2Theme.spacing(2),
+            vertical: LH2Theme.spacing(1),
+          ),
+          decoration: BoxDecoration(
+            color: widget.isActive ? LH2Colors.selectionBlue.withOpacity(0.2) : null,
+            borderRadius: BorderRadius.circular(LH2Theme.spacing(0.5)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              EditableTabLabel(tab: widget.tab, isActive: widget.isActive),
+              if (_hovered)
+                GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () {
+                    ref.read(workspaceControllerProvider.notifier).deleteTab(widget.tab.id);
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 4.0),
+                    child: Icon(
+                      Icons.close,
+                      size: 14,
+                      color: Colors.grey[500],
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ),
-        decoration: BoxDecoration(
-          color: isActive ? LH2Colors.selectionBlue.withOpacity(0.2) : null,
-          borderRadius: BorderRadius.circular(LH2Theme.spacing(0.5)),
-        ),
-        child: EditableTabLabel(tab: tab, isActive: isActive),
       ),
     );
   }
