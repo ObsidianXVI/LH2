@@ -42,11 +42,19 @@ class CrosshairModeController extends Notifier<CrosshairModeState> {
   }
 
   void setHoveredItemId(String? itemId) {
-    state = state.copyWith(hoveredItemId: itemId);
+    state = CrosshairModeState(
+      enabled: state.enabled,
+      hoveredItemId: itemId,
+      linkDraft: state.linkDraft,
+    );
   }
 
   void setLinkDraft(Map<String, Object?>? draft) {
-    state = state.copyWith(linkDraft: draft);
+    state = CrosshairModeState(
+      enabled: state.enabled,
+      hoveredItemId: state.hoveredItemId,
+      linkDraft: draft,
+    );
   }
 
   void clear() {

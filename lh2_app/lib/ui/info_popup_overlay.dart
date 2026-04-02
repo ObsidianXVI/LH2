@@ -57,14 +57,17 @@ class InfoPopupOverlay extends ConsumerWidget {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        Text(
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
                           state.mode == InfoPopupMode.add
                               ? 'Configure New Node'
                               : 'Node Information',
                           style: LH2Theme.nodeTitle,
+                          overflow: TextOverflow.ellipsis,
                         ),
+                      ),
                         if (!crosshairState.enabled)
                           IconButton(
                             icon:

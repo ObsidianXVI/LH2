@@ -42,9 +42,12 @@ class CrosshairOverlay extends ConsumerWidget {
             children: [
               Row(
                 children: [
-                  const Text(
-                    'Crosshair Mode',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  const Expanded(
+                    child: Text(
+                      'Crosshair Mode',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                   const Spacer(),
                   IconButton(
