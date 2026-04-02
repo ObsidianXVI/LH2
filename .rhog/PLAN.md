@@ -484,6 +484,8 @@ Implement:
 
 ###### Task 1.1.4-1: Close tab (hover X, delete state) [L2]
 
+*DONE*
+
 ```text
 Prompt (L2):
 
@@ -503,6 +505,8 @@ Edge cases:
 ##### 1.2.1: Query Box Overlay
 
 ###### Task 1.2.1-1: Query overlay layout + “Enter to run” behavior [L2]
+
+*DONE*
 
 ```text
 Prompt (L2):

@@ -7,6 +7,7 @@ import 'providers.dart';
 import 'theme.dart';
 import '../ui/theme/tokens.dart';
 import '../domain/notifiers/workspace_controller.dart';
+import '../ui/query_overlay.dart';
 
 /// Hyperpanel Scaffold with hover-reveal tab bar (FEATURES.md §1.1.1).
 class HyperpanelScaffold extends ConsumerWidget {
@@ -109,7 +110,17 @@ class HyperpanelScaffold extends ConsumerWidget {
               ),
             ),
           ),
-          Expanded(child: child),
+          Expanded(
+            child: Row(
+              children: [
+                const SizedBox(
+                  width: 320.0,
+                  child: QueryOverlay(),
+                ),
+                Expanded(child: child),
+              ],
+            ),
+          ),
         ],
       ),
     );
