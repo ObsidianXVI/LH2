@@ -16,7 +16,7 @@ import 'canvas_provider.dart';
 import 'demo_providers.dart';
 import '../../domain/notifiers/info_popup_controller.dart';
 
-/// Context menu for the flow canvas with "Add Node" and selection-aware actions.
+/// Context menu for the flow canvas with "Add Node", "Add Widget" and selection-aware actions.
 class CanvasContextMenu extends ConsumerStatefulWidget {
   final Offset position;
   final VoidCallback onDismiss;
@@ -43,8 +43,8 @@ class CanvasContextMenu extends ConsumerStatefulWidget {
 
 class _CanvasContextMenuState extends ConsumerState<CanvasContextMenu> {
   String? _hoveredNodeType;
-  // ignore: unused_field
   String? _hoveredTemplateId;
+  String? _hoveredWidgetType;
   Timer? _hoverTimer;
   Timer? _menuDismissTimer;
   static const Duration _hoverDelay = Duration(milliseconds: 100);
@@ -75,6 +75,18 @@ class _CanvasContextMenuState extends ConsumerState<CanvasContextMenu> {
             onHover: (hovering) {
               setState(() {
                 _hoveredNodeType = hovering ? 'add_node' : null;
+                _hoveredWidgetType = null;
+              });
+            },
+            onTap: () {},
+            hasSubmenu: true,
+          ),
+          _buildMenuItem(
+            'Add Widget',
+            onHover: (hovering) {
+              setState(() {
+                _hoveredWidgetType = hovering ? 'add_widget' : null;
+                _hoveredNodeType = null;
               });
             },
             onTap: () {},
@@ -203,6 +215,7 @@ class _CanvasContextMenuState extends ConsumerState<CanvasContextMenu> {
       setState(() {
         _hoveredNodeType = null;
         _hoveredTemplateId = null;
+        _hoveredWidgetType = null;
       });
     }
   }
@@ -256,6 +269,36 @@ class _CanvasContextMenuState extends ConsumerState<CanvasContextMenu> {
             },
             onTap: () {},
             hasSubmenu: true,
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildWidgetsMenu() {
+    final widgetTypes = ['Text Widget'];
+
+    return Container(
+      decoration: BoxDecoration(
+        color: LH2Colors.panel,
+        border: Border.all(color: LH2Colors.border),
+        borderRadius: BorderRadius.circular(4),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.2),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: widgetTypes.map((type) {
+          return _buildMenuItem(
+            type,
+            onHover: (hovering) {},
+            onTap: () => _onWidgetSelected(type),
           );
         }).toList(),
       ),
@@ -395,6 +438,29 @@ class _CanvasContextMenuState extends ConsumerState<CanvasContextMenu> {
       );
     }
 
+    if (_hoveredWidgetType != null) {
+      widgets.add(
+        Positioned(
+          left: widget.position.dx + 160,
+          top: widget.position.dy + 48, // Position below "Add Widget" item
+          child: MouseRegion(
+            onEnter: (_) {
+              _menuDismissTimer?.cancel();
+            },
+            onExit: (_) {
+              _menuDismissTimer?.cancel();
+              _menuDismissTimer = Timer(_menuDismissDelay, () {
+                if (mounted) {
+                  widget.onDismiss();
+                }
+              });
+            },
+            child: _buildWidgetsMenu(),
+          ),
+        ),
+      );
+    }
+
     if (_hoveredNodeType != null && _hoveredNodeType != 'add_node') {
       try {
         final nodeType = ObjectType.values.byName(_hoveredNodeType!);
@@ -452,6 +518,57 @@ class _CanvasContextMenuState extends ConsumerState<CanvasContextMenu> {
         .split(' ')
         .map((word) => word[0].toUpperCase() + word.substring(1))
         .join(' ');
+  }
+
+  Future<void> _onWidgetSelected(String widgetType) async {
+    try {
+      if (widgetType == 'Text Widget') {
+        // Create a new text widget at the world position
+        final itemId = 'text-${DateTime.now().millisecondsSinceEpoch}';
+        final worldRect = Rect.fromLTWH(
+          widget.worldPosition.dx - 100,
+          widget.worldPosition.dy - 30,
+          200,
+          60,
+        );
+
+        final newItem = CanvasItem(
+          itemId: itemId,
+          itemType: 'text',
+          worldRect: worldRect,
+          config: {
+            'text': 'New Text Widget',
+            'style': {
+              'fontSize': 16.0,
+              'color': LH2Colors.textPrimary.value,
+            },
+          },
+        );
+
+        widget.controller.addItem(newItem);
+        widget.onDismiss();
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Added Text Widget'),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      widget.onDismiss();
+      Telemetry.warn(
+        'ui.canvas.context_menu',
+        'Failed to add widget: $e',
+        stackTrace: StackTrace.current,
+      );
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to add widget: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   Future<void> _onTemplateSelected(NodeTemplate template) async {

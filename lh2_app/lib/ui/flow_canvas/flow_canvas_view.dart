@@ -255,9 +255,12 @@ class _FlowCanvasViewState extends ConsumerState<FlowCanvasView> {
       color: Color(colorInt),
     );
 
-    _textController?.dispose();
-    _textController = TextEditingController(text: text);
-    _textController!.addListener(_debounceTextChange);
+    // Create controller only if not already exists or item changed
+    if (_textController == null || _editingItemId != item.itemId) {
+      _textController?.dispose();
+      _textController = TextEditingController(text: text);
+      _textController!.addListener(_debounceTextChange);
+    }
 
     return TextField(
       controller: _textController,
@@ -374,9 +377,18 @@ class _FlowCanvasViewState extends ConsumerState<FlowCanvasView> {
       if (_editingItemId == itemId) {
         _commitTextEdit();
       } else {
-        // Start editing
+        // Start editing - create controller here to avoid rebuild issues
         widget.controller.setSelection({itemId});
         _editingItemId = itemId;
+        final config = item.config;
+        final text = config?['text'] as String? ?? 'Text';
+        _textController?.dispose();
+        _textController = TextEditingController(text: text);
+        _textController!.addListener(_debounceTextChange);
+        // Request focus after controller is created
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _focusNode.requestFocus();
+        });
       }
     } else {
       widget.controller.setSelection({itemId});
