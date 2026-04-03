@@ -636,7 +636,10 @@ class FlowCanvasController extends CanvasController {
 
   /// Snap a world coordinate to the grid
   Offset snapToGrid(Offset worldPos) {
-    final gridWorldSize = gridSizePx / viewport.zoom;
+    // Keep snapping aligned with the rendered grid.
+    // GridBackgroundPainter now treats gridSizePx as a world-unit spacing,
+    // so snapping should use the same spacing.
+    final gridWorldSize = gridSizePx;
     return Offset(
       (worldPos.dx / gridWorldSize).round() * gridWorldSize,
       (worldPos.dy / gridWorldSize).round() * gridWorldSize,

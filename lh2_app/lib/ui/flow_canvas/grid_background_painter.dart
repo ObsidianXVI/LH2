@@ -30,8 +30,15 @@ class GridBackgroundPainter extends CustomPainter {
     final worldRight = pan.dx + halfWidth;
     final worldBottom = pan.dy + halfHeight;
 
-    // Calculate grid spacing in world coordinates
-    final gridWorldSize = gridSizePx / zoom;
+    // Calculate grid spacing in world coordinates.
+    //
+    // We want the grid to *scale visually* with zoom:
+    // - zoom in  => grid cells appear larger (more pixels between lines)
+    // - zoom out => grid cells appear smaller
+    //
+    // Therefore, the grid spacing must be constant in world units (not constant
+    // in screen pixels).
+    final gridWorldSize = gridSizePx;
 
     // Calculate the starting grid positions
     final startGridX = (worldLeft / gridWorldSize).floor() * gridWorldSize;
@@ -72,7 +79,7 @@ class GridBackgroundPainter extends CustomPainter {
       ..style = PaintingStyle.stroke;
 
     final originScreen = _worldToScreen(const Offset(0, 0), size);
-    
+
     if (originScreen.dx >= 0 && originScreen.dx <= size.width) {
       canvas.drawLine(
         Offset(originScreen.dx, 0),
@@ -80,7 +87,7 @@ class GridBackgroundPainter extends CustomPainter {
         originPaint,
       );
     }
-    
+
     if (originScreen.dy >= 0 && originScreen.dy <= size.height) {
       canvas.drawLine(
         Offset(0, originScreen.dy),
@@ -97,8 +104,8 @@ class GridBackgroundPainter extends CustomPainter {
   @override
   bool shouldRepaint(GridBackgroundPainter oldDelegate) {
     return pan != oldDelegate.pan ||
-           zoom != oldDelegate.zoom ||
-           gridSizePx != oldDelegate.gridSizePx ||
-           viewportSize != oldDelegate.viewportSize;
+        zoom != oldDelegate.zoom ||
+        gridSizePx != oldDelegate.gridSizePx ||
+        viewportSize != oldDelegate.viewportSize;
   }
 }
