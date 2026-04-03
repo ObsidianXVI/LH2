@@ -16,6 +16,7 @@ import 'data/workspace_repository.dart';
 import 'app/theme.dart';
 import 'ui/theme/tokens.dart';
 import 'app/responsive.dart';
+import 'app/modifier_state.dart';
 import 'app/hyperpanel_scaffold.dart';
 import 'ui/flow_canvas/flow_canvas_view.dart';
 import 'ui/flow_canvas/canvas_provider.dart';
@@ -51,6 +52,7 @@ class LH2App extends ConsumerWidget {
       title: 'LH2 Lighthouse Hyperpanel',
       debugShowCheckedModeBanner: false,
       theme: LH2Theme.materialTheme,
+      builder: (context, child) => ModifierTracker(child: child!),
       home: firebaseAsync.when(
         loading: () => const _SplashScreen(),
         error: (err, _) => _ErrorScreen(error: err),
