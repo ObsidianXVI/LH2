@@ -72,7 +72,7 @@ class HyperpanelScaffold extends ConsumerWidget {
             await controller.createTab(
               kind == 'flow' ? ws.CanvasKind.flow : ws.CanvasKind.calendar,
             );
-          } catch (e) {
+          } on LH2OpError catch (e) {
             if (context.mounted) {
               String msg = e.toString();
               if (e is LH2OpError) msg = e.message;
@@ -242,7 +242,9 @@ class _TabButtonState extends ConsumerState<TabButton> {
             vertical: LH2Theme.spacing(1),
           ),
           decoration: BoxDecoration(
-            color: widget.isActive ? LH2Colors.selectionBlue.withOpacity(0.2) : null,
+            color: widget.isActive
+                ? LH2Colors.selectionBlue.withOpacity(0.2)
+                : null,
             borderRadius: BorderRadius.circular(LH2Theme.spacing(0.5)),
           ),
           child: Row(
@@ -253,7 +255,9 @@ class _TabButtonState extends ConsumerState<TabButton> {
                 GestureDetector(
                   behavior: HitTestBehavior.opaque,
                   onTap: () {
-                    ref.read(ws.workspaceControllerProvider.notifier).deleteTab(widget.tab.id);
+                    ref
+                        .read(ws.workspaceControllerProvider.notifier)
+                        .deleteTab(widget.tab.id);
                   },
                   child: Padding(
                     padding: const EdgeInsets.only(left: 4.0),
@@ -366,7 +370,8 @@ class _EditableTabLabelState extends ConsumerState<EditableTabLabel> {
           ),
         },
         child: SizedBox(
-          width: 120, // Give TextField a fixed width during edit to avoid layout issues
+          width:
+              120, // Give TextField a fixed width during edit to avoid layout issues
           child: TextField(
             controller: _controller,
             focusNode: _focusNode,

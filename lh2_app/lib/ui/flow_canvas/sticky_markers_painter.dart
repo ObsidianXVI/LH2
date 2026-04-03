@@ -32,11 +32,15 @@ class StickyMarkersPainter extends CustomPainter {
     final double endWorldX = pan.dx + worldViewportWidth / 2;
 
     final double startMinutes = startWorldX;
-    final double firstRuleMinutes = (startMinutes / ruleIntervalMinutes).ceil() * ruleIntervalMinutes.toDouble();
+    final double firstRuleMinutes =
+        (startMinutes / ruleIntervalMinutes).ceil() *
+            ruleIntervalMinutes.toDouble();
 
-    for (double m = firstRuleMinutes; m <= endWorldX; m += ruleIntervalMinutes) {
+    for (double m = firstRuleMinutes;
+        m <= endWorldX;
+        m += ruleIntervalMinutes) {
       final double screenX = (m - pan.dx) * zoom + viewportSize.width / 2;
-      
+
       // Calculate Time Label
       final DateTime time = anchorStartSgt.add(Duration(minutes: m.toInt()));
       final String timeLabel = DateFormat('HHmm').format(time);
@@ -51,20 +55,25 @@ class StickyMarkersPainter extends CustomPainter {
 
       // Draw date marker (top row) if it's the start of a day or first visible
       if (m % 1440 == 0 || m == firstRuleMinutes) {
-         final String dateLabel = DateFormat('dd EEE').format(time).toUpperCase();
-         final datePainter = TextPainter(
-          text: TextSpan(text: dateLabel, style: textStyle.copyWith(fontWeight: FontWeight.bold, color: LH2Colors.textPrimary)),
+        final String dateLabel =
+            DateFormat('dd EEE').format(time).toUpperCase();
+        final datePainter = TextPainter(
+          text: TextSpan(
+              text: dateLabel,
+              style: textStyle.copyWith(
+                  fontWeight: FontWeight.bold, color: LH2Colors.textPrimary)),
           textDirection: TextDirection.ltr,
         )..layout();
-        
+
         // Background for date marker
         final bgPaint = Paint()..color = LH2Colors.background;
-        canvas.drawRect(Rect.fromLTWH(screenX, 0, datePainter.width + 10, 20), bgPaint);
-        
+        canvas.drawRect(
+            Rect.fromLTWH(screenX, 0, datePainter.width + 10, 20), bgPaint);
+
         datePainter.paint(canvas, Offset(screenX + 4, 4));
       }
     }
-    
+
     // Draw top bar background
     final barPaint = Paint()..color = LH2Colors.panel.withOpacity(0.9);
     canvas.drawRect(Rect.fromLTWH(0, 0, viewportSize.width, 22), barPaint);
