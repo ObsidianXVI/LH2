@@ -130,17 +130,21 @@ List<String> _splitQuery(String raw) {
 }
 
 /// Evaluates a QueryAst against cached LH2 objects.
-Future<List<LH2ObjectRef>> evaluateQuery(QueryAst ast, Ref ref) async {
+///
+/// Note: evaluation currently doesn't depend on Riverpod reads, but we keep a
+/// handle so we can later read typed caches/providers. For testability we
+/// accept any object (e.g. a [ProviderContainer] in tests).
+Future<List<LH2ObjectRef>> evaluateQuery(QueryAst ast, Object ref) async {
   // In a real implementation, this would fetch all objects from caches
   // and apply the filters from ast.nodes.
-  
+
   // For now, we simulate by getting all objects from the "mock" list
   // but applying the real filtering logic.
-  
+
   final allObjects = await _fetchAllObjects(ref);
-  
+
   var results = allObjects;
-  
+
   for (final node in ast.nodes) {
     results = results.where((obj) {
       if (node is TypeQueryNode) {
@@ -157,8 +161,8 @@ Future<List<LH2ObjectRef>> evaluateQuery(QueryAst ast, Ref ref) async {
         final timestamp = _getObjectTimestamp(obj);
         if (timestamp == null) return false;
         final date = DateTime.fromMillisecondsSinceEpoch(timestamp);
-        return date.isAfter(node.start.subtract(const Duration(seconds: 1))) && 
-               date.isBefore(node.end.add(const Duration(days: 1)));
+        return date.isAfter(node.start.subtract(const Duration(seconds: 1))) &&
+            date.isBefore(node.end.add(const Duration(days: 1)));
       }
       return true;
     }).toList();
@@ -171,10 +175,9 @@ Future<List<LH2ObjectRef>> evaluateQuery(QueryAst ast, Ref ref) async {
     return _getObjectName(a).compareTo(_getObjectName(b));
   });
 
-  return results.map((obj) => LH2ObjectRef(
-    _getObjectId(obj, ref), 
-    _getObjectName(obj)
-  )).toList();
+  return results
+      .map((obj) => LH2ObjectRef(_getObjectId(obj, ref), _getObjectName(obj)))
+      .toList();
 }
 
 String _getObjectName(LH2Object obj) {
@@ -197,12 +200,12 @@ int? _getObjectTimestamp(LH2Object obj) {
 // Helper to get ID - in a real app, LH2Object would have an 'id' field.
 // Since it's missing in the stub, we have to map it or assume it's available.
 // For the purpose of this task, we'll assume we can find it.
-String _getObjectId(LH2Object obj, Ref ref) {
+String _getObjectId(LH2Object obj, Object ref) {
   // This is a bit of a hack since ID is not in the model but in Firestore
-  return 'id-${obj.hashCode}'; 
+  return 'id-${obj.hashCode}';
 }
 
-Future<List<LH2Object>> _fetchAllObjects(Ref ref) async {
+Future<List<LH2Object>> _fetchAllObjects(Object ref) async {
   // Mock fetching from all caches
   final results = <LH2Object>[
     const ProjectGroup(name: 'Alpha Project Group', projectsIds: []),
@@ -298,7 +301,8 @@ class QueryController extends Notifier<QueryState> {
     List<LH2ObjectRef> filteredResults = rawResults;
     if (state.hideResultsInView) {
       final visibleIds = canvasCtrl.visibleObjectIds;
-      filteredResults = rawResults.where((r) => !visibleIds.contains(r.id)).toList();
+      filteredResults =
+          rawResults.where((r) => !visibleIds.contains(r.id)).toList();
     }
 
     state = state.copyWith(
@@ -320,7 +324,6 @@ class QueryController extends Notifier<QueryState> {
 }
 
 /// Provider for [QueryController].
-final queryControllerProvider =
-    NotifierProvider<QueryController, QueryState>(
+final queryControllerProvider = NotifierProvider<QueryController, QueryState>(
   QueryController.new,
 );

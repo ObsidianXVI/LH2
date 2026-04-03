@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
+import 'package:intl/intl.dart' hide TextDirection;
 import 'package:lh2_app/ui/theme/tokens.dart';
 
 class StickyMarkersPainter extends CustomPainter {
