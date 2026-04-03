@@ -22,30 +22,49 @@ class BaseNodeWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final spec = template.renderSpec;
     final style = spec['style'] as Map<String, dynamic>? ?? {};
-    
-    final backgroundColor = _parseColor(style['backgroundColor']) ?? LH2Colors.panel;
+
+    var backgroundColor =
+        _parseColor(style['backgroundColor']) ?? LH2Colors.panel;
     final borderColor = _parseColor(style['borderColor']) ?? LH2Colors.border;
     final textColor = _parseColor(style['textColor']) ?? LH2Colors.textPrimary;
-    
+
     final size = spec['size'] as Map<String, dynamic>? ?? {};
     final width = (size['width'] as num?)?.toDouble();
     final height = (size['height'] as num?)?.toDouble();
 
+    if (item.disabledByScenario) {
+      backgroundColor = backgroundColor.withOpacity(0.5);
+    }
+
     return Container(
       width: width,
       height: height,
+      foregroundDecoration: item.disabledByScenario
+          ? BoxDecoration(
+              color: Colors.grey.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(4),
+            )
+          : null,
       decoration: BoxDecoration(
         color: backgroundColor,
-        border: Border.all(color: borderColor),
+        border: Border.all(
+          color: item.disabledByScenario ? Colors.grey : borderColor,
+        ),
         borderRadius: BorderRadius.circular(4),
       ),
-      child: DefaultTextStyle(
-        style: TextStyle(
-          color: textColor,
-          fontFamily: 'Menlo',
-          fontSize: 12,
+      child: IgnorePointer(
+        ignoring: item.disabledByScenario,
+        child: Opacity(
+          opacity: item.disabledByScenario ? 0.5 : 1.0,
+          child: DefaultTextStyle(
+            style: TextStyle(
+              color: textColor,
+              fontFamily: 'Menlo',
+              fontSize: 12,
+            ),
+            child: child,
+          ),
         ),
-        child: child,
       ),
     );
   }

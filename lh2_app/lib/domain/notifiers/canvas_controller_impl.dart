@@ -117,6 +117,7 @@ class CanvasItem {
   final String? objectType; // for nodes
   final Map<String, dynamic>? config;
   final CanvasItemSnapState snap;
+  final bool disabledByScenario;
 
   const CanvasItem({
     required this.itemId,
@@ -126,6 +127,7 @@ class CanvasItem {
     this.objectType,
     this.config,
     this.snap = const CanvasItemSnapState(),
+    this.disabledByScenario = false,
   });
 
   factory CanvasItem.fromJson(String itemId, Map<String, Object?> json) {
@@ -152,6 +154,7 @@ class CanvasItem {
       snap: json['snap'] != null
           ? CanvasItemSnapState.fromJson(json['snap'] as Map<String, Object?>)
           : const CanvasItemSnapState(),
+      disabledByScenario: json['disabledByScenario'] as bool? ?? false,
     );
   }
 
@@ -168,6 +171,7 @@ class CanvasItem {
       if (objectType != null) 'objectType': objectType,
       if (config != null) 'config': config,
       'snap': snap.toJson(),
+      'disabledByScenario': disabledByScenario,
     };
   }
 }
@@ -386,6 +390,7 @@ abstract class CanvasController extends ChangeNotifier {
         objectType: item.objectType,
         config: item.config,
         snap: snap ?? item.snap,
+        disabledByScenario: item.disabledByScenario,
       );
       notifyListeners();
     }
@@ -401,6 +406,7 @@ abstract class CanvasController extends ChangeNotifier {
       worldRect: item.worldRect,
       objectId: item.objectId,
       config: newConfig,
+      disabledByScenario: item.disabledByScenario,
     );
     notifyListeners();
   }
