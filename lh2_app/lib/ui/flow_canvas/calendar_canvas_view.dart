@@ -9,6 +9,7 @@ import 'package:lh2_app/ui/crosshair_overlay.dart';
 import 'package:lh2_app/app/modifier_state.dart';
 import 'package:lh2_app/domain/notifiers/marquee_selection_controller.dart';
 import 'package:lh2_app/ui/theme/tokens.dart';
+import 'package:lh2_app/ui/flow_canvas/sticky_markers_painter.dart';
 
 class CalendarCanvasView extends ConsumerStatefulWidget {
   final CalendarCanvasController controller;
@@ -151,8 +152,20 @@ class _CalendarCanvasViewState extends ConsumerState<CalendarCanvasView> {
   }
 
   Widget _buildStickyMarkersLayer() {
-    // Placeholder for Task 2.2.2
-    return const SizedBox.shrink();
+    return LayoutBuilder(builder: (context, constraints) {
+      final viewportSize = Size(constraints.maxWidth, constraints.maxHeight);
+      return CustomPaint(
+        painter: StickyMarkersPainter(
+          pan: widget.controller.viewport.pan,
+          zoom: widget.controller.viewport.zoom,
+          minutesPerPixel: widget.controller.minutesPerPixel,
+          ruleIntervalMinutes: widget.controller.ruleIntervalMinutes,
+          viewportSize: viewportSize,
+          anchorStartSgt: widget.controller.anchorStartSgt,
+        ),
+        size: viewportSize,
+      );
+    });
   }
 
   Widget _buildMarqueeOverlay() {
