@@ -16,29 +16,36 @@ class InfoPopupOverlay extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(infoPopupControllerProvider);
-    final crosshairState = ref.watch(crosshairModeControllerProvider);
+    // Use select to only rebuild when isOpen, anchorScreenRect, mode, itemId, or objectType changes
+    // NOT on every hover state change (isHovered)
+    final isOpen = ref.watch(infoPopupControllerProvider.select((s) => s.isOpen));
+    final anchorScreenRect = ref.watch(infoPopupControllerProvider.select((s) => s.anchorScreenRect));
+    final mode = ref.watch(infoPopupControllerProvider.select((s) => s.mode));
+    final itemId = ref.watch(infoPopupControllerProvider.select((s) => s.itemId));
+    final objectType = ref.watch(infoPopupControllerProvider.select((s) => s.objectType));
+    
+    final crosshairEnabled = ref.watch(crosshairModeControllerProvider.select((s) => s.enabled));
 
     // Close info popup when Crosshair Mode is enabled
-    if (crosshairState.enabled && state.isOpen) {
+    if (crosshairEnabled && isOpen) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         ref.read(infoPopupControllerProvider.notifier).close();
       });
     }
 
-    if (!state.isOpen || state.anchorScreenRect == null) {
+    if (!isOpen || anchorScreenRect == null || itemId == null || objectType == null) {
       return const SizedBox.shrink();
     }
 
     // Basic positioning logic: place it to the right of the anchor
-    final left = state.anchorScreenRect!.right + 8;
-    final top = state.anchorScreenRect!.top;
+    final left = anchorScreenRect.right + 8;
+    final top = anchorScreenRect.top;
 
     return Stack(
       children: [
         // Background overlay to catch clicks outside (Save on click outside)
         // Only show this in 'add' mode, not in 'view' (hover) mode.
-        if (state.mode == InfoPopupMode.add)
+        if (mode == InfoPopupMode.add)
           Positioned.fill(
             child: GestureDetector(
               onTap: () =>
@@ -50,12 +57,14 @@ class InfoPopupOverlay extends ConsumerWidget {
           left: left,
           top: top,
           child: MouseRegion(
-            onEnter: (_) => ref
-                .read(infoPopupControllerProvider.notifier)
-                .setIsHovered(true),
-            onExit: (_) => ref
-                .read(infoPopupControllerProvider.notifier)
-                .setIsHovered(false),
+            onEnter: (_) {
+              // Use read (not watch) to avoid triggering rebuilds
+              ref.read(infoPopupControllerProvider.notifier).setIsHovered(true);
+            },
+            onExit: (_) {
+              // Use read (not watch) to avoid triggering rebuilds
+              ref.read(infoPopupControllerProvider.notifier).setIsHovered(false);
+            },
             child: Material(
               elevation: 8,
               borderRadius: BorderRadius.circular(8),
@@ -75,7 +84,7 @@ class InfoPopupOverlay extends ConsumerWidget {
                       children: [
                         Expanded(
                           child: Text(
-                            state.mode == InfoPopupMode.add
+                            mode == InfoPopupMode.add
                                 ? 'Configure New Node'
                                 : 'Node Information',
                             style: LH2Theme.nodeTitle.copyWith(
@@ -83,7 +92,7 @@ class InfoPopupOverlay extends ConsumerWidget {
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        if (!crosshairState.enabled)
+                        if (!crosshairEnabled)
                           IconButton(
                             icon:
                                 const Icon(Icons.visibility_outlined, size: 18),
@@ -102,15 +111,14 @@ class InfoPopupOverlay extends ConsumerWidget {
                     ),
                     const Divider(),
                     const SizedBox(height: 8),
-                    if (state.itemId != null && state.objectType != null)
-                      _InfoPopupContent(
-                        itemId: state.itemId!,
-                        objectType: state.objectType!,
-                        isEditable: true, // Always editable (add or view mode)
-                        onClose: () => ref
-                            .read(infoPopupControllerProvider.notifier)
-                            .close(),
-                      ),
+                    _InfoPopupContent(
+                      itemId: itemId,
+                      objectType: objectType,
+                      isEditable: true, // Always editable (add or view mode)
+                      onClose: () => ref
+                          .read(infoPopupControllerProvider.notifier)
+                          .close(),
+                    ),
                   ],
                 ),
               ),

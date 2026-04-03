@@ -16,27 +16,33 @@ class CrosshairOverlay extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final crosshairState = ref.watch(crosshairModeControllerProvider);
+    // Use select to only rebuild on specific state changes, not every cursor movement
+    final enabled = ref.watch(crosshairModeControllerProvider.select((s) => s.enabled));
+    final hoveredItemId = ref.watch(crosshairModeControllerProvider.select((s) => s.hoveredItemId));
+    final lastHoveredItemId = ref.watch(crosshairModeControllerProvider.select((s) => s.lastHoveredItemId));
+    final linkDraft = ref.watch(crosshairModeControllerProvider.select((s) => s.linkDraft));
+    
     final canvasController = ref.watch(activeCanvasControllerProvider);
 
-    if (!crosshairState.enabled) {
+    if (!enabled) {
       return const SizedBox.shrink();
     }
 
-    final hoveredItemId =
-        crosshairState.hoveredItemId ?? crosshairState.lastHoveredItemId;
-    final hoveredItem = canvasController?.items[hoveredItemId];
+    final effectiveHoveredItemId = hoveredItemId ?? lastHoveredItemId;
+    final hoveredItem = canvasController?.items[effectiveHoveredItemId];
 
     return Positioned(
       right: 16,
       top: 16,
       child: MouseRegion(
-        onEnter: (_) => ref
-            .read(crosshairModeControllerProvider.notifier)
-            .setPanelHovered(true),
-        onExit: (_) => ref
-            .read(crosshairModeControllerProvider.notifier)
-            .setPanelHovered(false),
+        onEnter: (_) {
+          // Use read (not watch) to avoid triggering rebuilds
+          ref.read(crosshairModeControllerProvider.notifier).setPanelHovered(true);
+        },
+        onExit: (_) {
+          // Use read (not watch) to avoid triggering rebuilds
+          ref.read(crosshairModeControllerProvider.notifier).setPanelHovered(false);
+        },
         child: Material(
           elevation: 8,
           borderRadius: BorderRadius.circular(8),
@@ -94,14 +100,14 @@ class CrosshairOverlay extends ConsumerWidget {
                       style: LH2Theme.body.copyWith(
                           fontSize: 10, color: LH2Colors.textSecondary)),
                 ],
-                if (crosshairState.linkDraft != null) ...[
+                if (linkDraft != null) ...[
                   const SizedBox(height: 16),
                   const Text('Link Draft:',
                       style: TextStyle(fontWeight: FontWeight.bold)),
                   Text(
-                      'Start: ${crosshairState.linkDraft!['startItemId'] ?? 'unknown'}'),
+                      'Start: ${linkDraft['startItemId'] ?? 'unknown'}'),
                   Text(
-                      'Type: ${crosshairState.linkDraft!['linkType'] ?? 'default'}'),
+                      'Type: ${linkDraft['linkType'] ?? 'default'}'),
                 ],
               ],
             ),
