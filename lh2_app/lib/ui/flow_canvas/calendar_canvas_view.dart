@@ -10,6 +10,8 @@ import 'package:lh2_app/app/modifier_state.dart';
 import 'package:lh2_app/domain/notifiers/marquee_selection_controller.dart';
 import 'package:lh2_app/ui/theme/tokens.dart';
 import 'package:lh2_app/ui/flow_canvas/sticky_markers_painter.dart';
+import 'package:lh2_app/ui/flow_canvas/calendar_node_renderer_registry.dart';
+import 'package:lh2_app/ui/flow_canvas/calendar_data_providers.dart';
 
 class CalendarCanvasView extends ConsumerStatefulWidget {
   final CalendarCanvasController controller;
@@ -124,6 +126,29 @@ class _CalendarCanvasViewState extends ConsumerState<CalendarCanvasView> {
     final screenRect = _worldRectToScreen(item.worldRect);
     final isSelected = widget.controller.selection.contains(itemId);
 
+    Widget content;
+    if (item.itemType == 'node' && item.objectId != null) {
+      final object = ref.watch(lh2ObjectProvider(item.objectId!));
+      final template = ref.watch(nodeTemplateProvider(item.config?['templateId'] ?? 'default'));
+      
+      content = object.when(
+        data: (obj) => template.when(
+          data: (tmpl) => calendarNodeRendererRegistry.build(obj, tmpl, item),
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, s) => Text('Error loading template: $e'),
+        ),
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, s) => Text('Error loading object: $e'),
+      );
+    } else {
+      content = Center(
+        child: Text(
+          item.itemType,
+          style: const TextStyle(fontSize: 10, color: LH2Colors.textSecondary),
+        ),
+      );
+    }
+
     return Positioned(
       left: screenRect.left,
       top: screenRect.top,
@@ -164,6 +189,18 @@ class _CalendarCanvasViewState extends ConsumerState<CalendarCanvasView> {
             newRect = Rect.fromLTRB(snappedLeft, newRect.top, snappedRight, newRect.bottom);
           }
 
+          // Collision check for root-level deliverables
+          if (item.objectType == 'deliverable' && item.config?['isRoot'] == true) {
+             for (final otherItem in widget.controller.items.values) {
+               if (otherItem.itemId != item.itemId && otherItem.worldRect.overlaps(newRect)) {
+                 ScaffoldMessenger.of(context).showSnackBar(
+                   const SnackBar(content: Text('Root-level deliverable cannot overlap with other nodes')),
+                 );
+                 return; // Block move
+               }
+             }
+          }
+
           widget.controller.updateItemRect(
             itemId,
             newRect,
@@ -183,12 +220,7 @@ class _CalendarCanvasViewState extends ConsumerState<CalendarCanvasView> {
             ),
             borderRadius: BorderRadius.circular(4),
           ),
-          child: Center(
-            child: Text(
-              item.itemType,
-              style: const TextStyle(fontSize: 10, color: LH2Colors.textSecondary),
-            ),
-          ),
+          child: content,
         ),
       ),
     );
