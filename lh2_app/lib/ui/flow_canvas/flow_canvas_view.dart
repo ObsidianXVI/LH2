@@ -22,6 +22,7 @@ import 'package:lh2_app/ui/flow_canvas/demo_items.dart';
 import 'package:lh2_app/ui/flow_canvas/canvas_provider.dart';
 import 'package:lh2_app/ui/flow_canvas/link_painter.dart';
 import 'package:lh2_app/domain/models/node_template_ports.dart';
+import 'package:lh2_app/ui/flow_canvas/query_board.dart';
 
 /// Flow Canvas widget that renders an infinite scroll canvas with grid background,
 /// pan/zoom interactions, and draggable items.
@@ -304,13 +305,18 @@ class _FlowCanvasViewState extends ConsumerState<FlowCanvasView> {
                           ? (isEditing
                               ? _buildTextEditor(item)
                               : _buildTextDisplay(item))
-                          : Text(
-                              item.itemType,
-                              style: const TextStyle(
-                                color: LH2Colors.textPrimary,
-                                fontSize: 12,
-                              ),
-                            ),
+                          : item.itemType == 'queryBoard'
+                              ? QueryBoardWidget(
+                                  itemId: itemId,
+                                  controller: widget.controller,
+                                )
+                              : Text(
+                                  item.itemType,
+                                  style: const TextStyle(
+                                    color: LH2Colors.textPrimary,
+                                    fontSize: 12,
+                                  ),
+                                ),
                     ),
                   ),
                 ),

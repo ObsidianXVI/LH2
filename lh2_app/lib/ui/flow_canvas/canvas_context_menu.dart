@@ -142,7 +142,8 @@ class _CanvasContextMenuState extends ConsumerState<CanvasContextMenu> {
               Text(
                 text,
                 style: LH2Theme.body.copyWith(
-                  color: enabled ? LH2Colors.textPrimary : LH2Colors.textSecondary,
+                  color:
+                      enabled ? LH2Colors.textPrimary : LH2Colors.textSecondary,
                   fontSize: 14,
                 ),
               ),
@@ -151,7 +152,9 @@ class _CanvasContextMenuState extends ConsumerState<CanvasContextMenu> {
                 Icon(
                   Icons.arrow_right,
                   size: 16,
-                  color: enabled ? LH2Colors.textSecondary : LH2Colors.textSecondary.withOpacity(0.5),
+                  color: enabled
+                      ? LH2Colors.textSecondary
+                      : LH2Colors.textSecondary.withOpacity(0.5),
                 ),
               ],
             ],
@@ -276,7 +279,7 @@ class _CanvasContextMenuState extends ConsumerState<CanvasContextMenu> {
   }
 
   Widget _buildWidgetsMenu() {
-    final widgetTypes = ['Text Widget'];
+    final widgetTypes = ['Text Widget', 'Query Board'];
 
     return Container(
       decoration: BoxDecoration(
@@ -551,6 +554,38 @@ class _CanvasContextMenuState extends ConsumerState<CanvasContextMenu> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Added Text Widget'),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      } else if (widgetType == 'Query Board') {
+        // Create a new query board widget at the world position
+        final itemId = 'queryboard-${DateTime.now().millisecondsSinceEpoch}';
+        final worldRect = Rect.fromLTWH(
+          widget.worldPosition.dx - 200,
+          widget.worldPosition.dy - 150,
+          400,
+          300,
+        );
+
+        final newItem = CanvasItem(
+          itemId: itemId,
+          itemType: 'queryBoard',
+          worldRect: worldRect,
+          config: {
+            'title': 'Query Board',
+            'queryText': 'type:task',
+            'widthPx': 400,
+            'heightPx': 300,
+            'hideResultsInView': false,
+          },
+        );
+
+        widget.controller.addItem(newItem);
+        widget.onDismiss();
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Added Query Board'),
             duration: const Duration(seconds: 2),
           ),
         );

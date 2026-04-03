@@ -849,6 +849,8 @@ Data model:
 
 ###### Task 3.1.1-2: Connection model + rendering + persistence (Flow Canvas) [L4]
 
+*DONE*
+
 ```text
 Prompt (L4):
 
