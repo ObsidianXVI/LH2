@@ -131,8 +131,45 @@ class _CalendarCanvasViewState extends ConsumerState<CalendarCanvasView> {
       height: screenRect.height,
       child: GestureDetector(
         onPanUpdate: (details) {
+          final modifierState = ref.read(modifierStateProvider);
+          final bool isCmdPressed = modifierState.cmd;
+
           final deltaWorld = details.delta / widget.controller.viewport.zoom;
-          widget.controller.updateItemRect(itemId, item.worldRect.shift(deltaWorld));
+          Rect newRect = item.worldRect.shift(deltaWorld);
+
+          // Snapping logic
+          bool shouldSnap = false;
+          bool startSnapped = item.snap.startSnapped;
+          bool endSnapped = item.snap.endSnapped;
+
+          // If either end has been snapped once, auto-snap unless Cmd is held
+          if (startSnapped || endSnapped) {
+            shouldSnap = !isCmdPressed;
+          } else {
+            // Default: freehand, Cmd enables snap
+            shouldSnap = isCmdPressed;
+          }
+
+          if (shouldSnap) {
+            // Snap left (start) and right (end)
+            final double snappedLeft = widget.controller.snapWorldX(newRect.left);
+            final double snappedRight = widget.controller.snapWorldX(newRect.right);
+
+            // Update snap metadata
+            startSnapped = true;
+            endSnapped = true;
+
+            newRect = Rect.fromLTRB(snappedLeft, newRect.top, snappedRight, newRect.bottom);
+          }
+
+          widget.controller.updateItemRect(
+            itemId,
+            newRect,
+            snap: CanvasItemSnapState(
+              startSnapped: startSnapped,
+              endSnapped: endSnapped,
+            ),
+          );
         },
         onTap: () => widget.controller.setSelection({itemId}),
         child: Container(

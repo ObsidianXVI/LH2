@@ -115,6 +115,7 @@ class CanvasItem {
   final Rect worldRect;
   final String? objectId; // Firestore doc id (for nodes)
   final Map<String, dynamic>? config;
+  final CanvasItemSnapState snap;
 
   const CanvasItem({
     required this.itemId,
@@ -122,6 +123,7 @@ class CanvasItem {
     required this.worldRect,
     this.objectId,
     this.config,
+    this.snap = const CanvasItemSnapState(),
   });
 
   factory CanvasItem.fromJson(String itemId, Map<String, Object?> json) {
@@ -144,6 +146,9 @@ class CanvasItem {
       ),
       objectId: json['objectId'] as String?,
       config: json['config'] as Map<String, dynamic>?,
+      snap: json['snap'] != null
+          ? CanvasItemSnapState.fromJson(json['snap'] as Map<String, Object?>)
+          : const CanvasItemSnapState(),
     );
   }
 
@@ -158,6 +163,31 @@ class CanvasItem {
       },
       if (objectId != null) 'objectId': objectId,
       if (config != null) 'config': config,
+      'snap': snap.toJson(),
+    };
+  }
+}
+
+class CanvasItemSnapState {
+  final bool startSnapped;
+  final bool endSnapped;
+
+  const CanvasItemSnapState({
+    this.startSnapped = false,
+    this.endSnapped = false,
+  });
+
+  factory CanvasItemSnapState.fromJson(Map<String, Object?> json) {
+    return CanvasItemSnapState(
+      startSnapped: json['startSnapped'] as bool? ?? false,
+      endSnapped: json['endSnapped'] as bool? ?? false,
+    );
+  }
+
+  Map<String, Object?> toJson() {
+    return {
+      'startSnapped': startSnapped,
+      'endSnapped': endSnapped,
     };
   }
 }
@@ -341,7 +371,7 @@ abstract class CanvasController extends ChangeNotifier {
   }
 
   /// Update an item's rectangle
-  void updateItemRect(String itemId, Rect newWorldRect) {
+  void updateItemRect(String itemId, Rect newWorldRect, {CanvasItemSnapState? snap}) {
     final item = _items[itemId];
     if (item != null) {
       _items[itemId] = CanvasItem(
@@ -350,6 +380,7 @@ abstract class CanvasController extends ChangeNotifier {
         worldRect: newWorldRect,
         objectId: item.objectId,
         config: item.config,
+        snap: snap ?? item.snap,
       );
       notifyListeners();
     }
@@ -595,6 +626,12 @@ class CalendarCanvasController extends CanvasController {
     minutesPerPixel = nextMinutesPerPixel;
     ruleIntervalMinutes = nextRuleInterval;
     notifyListeners();
+  }
+
+  double snapWorldX(double worldX) {
+    // Snap increment is 15 minutes.
+    const snapIncrement = 15.0;
+    return (worldX / snapIncrement).round() * snapIncrement;
   }
 }
 
