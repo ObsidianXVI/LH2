@@ -58,10 +58,14 @@ class _CalendarCanvasViewState extends ConsumerState<CalendarCanvasView> {
 
         return Listener(
           onPointerSignal: (event) {
-            // Handle zooming/scaling if Cmd is held (handled in Task 2.2.3)
-            // For now, handle basic panning
             if (event is PointerScrollEvent) {
-              widget.controller.panBy(event.scrollDelta);
+              final modifierState = ref.read(modifierStateProvider);
+              if (modifierState.cmd) {
+                widget.controller.handleCmdScroll(event.scrollDelta.dy);
+              } else {
+                widget.controller.panBy(event.scrollDelta);
+              }
+              setState(() {});
             }
           },
           child: GestureDetector(

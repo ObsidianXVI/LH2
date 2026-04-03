@@ -1,5 +1,6 @@
 library;
 
+import 'dart:math' as Math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -567,6 +568,32 @@ class CalendarCanvasController extends CanvasController {
   void updateScaling(double newMinutesPerPixel, int newRuleInterval) {
     minutesPerPixel = newMinutesPerPixel;
     ruleIntervalMinutes = newRuleInterval;
+    notifyListeners();
+  }
+
+  void handleCmdScroll(double deltaY) {
+    // k is a sensitivity constant
+    const k = 0.001;
+    final double nextMinutesPerPixel = (minutesPerPixel * Math.exp(k * deltaY)).clamp(0.01, 1440.0);
+    
+    int nextRuleInterval = ruleIntervalMinutes;
+    final double pixelSpacing = nextRuleInterval / nextMinutesPerPixel * viewport.zoom;
+    
+    const double minPx = 50.0;
+    const double maxPx = 200.0;
+
+    if (pixelSpacing < minPx) {
+      if (nextRuleInterval < 1440) {
+        nextRuleInterval *= 2;
+      }
+    } else if (pixelSpacing > maxPx) {
+      if (nextRuleInterval > 60) {
+        nextRuleInterval ~/= 2;
+      }
+    }
+
+    minutesPerPixel = nextMinutesPerPixel;
+    ruleIntervalMinutes = nextRuleInterval;
     notifyListeners();
   }
 }
