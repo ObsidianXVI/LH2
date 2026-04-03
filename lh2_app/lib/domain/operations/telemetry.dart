@@ -85,6 +85,40 @@ class Telemetry {
     _log(logEntry);
   }
 
+  /// Logs a Firestore read latency.
+  static void firestoreRead(String collection, String id, int latencyMs) {
+    _log({
+      'ts': DateTime.now().millisecondsSinceEpoch,
+      'level': 'info',
+      'type': 'firestore_read',
+      'collection': collection,
+      'id': id,
+      'latencyMs': latencyMs,
+    });
+  }
+
+  /// Logs a cache hit.
+  static void cacheHit(String type, String id) {
+    _log({
+      'ts': DateTime.now().millisecondsSinceEpoch,
+      'level': 'info',
+      'type': 'cache_hit',
+      'objectType': type,
+      'id': id,
+    });
+  }
+
+  /// Logs a cache miss.
+  static void cacheMiss(String type, String id) {
+    _log({
+      'ts': DateTime.now().millisecondsSinceEpoch,
+      'level': 'info',
+      'type': 'cache_miss',
+      'objectType': type,
+      'id': id,
+    });
+  }
+
   /// Internal log output - writes JSON to console.
   static void _log(Map<String, Object?> entry) {
     // Use print for console output in Flutter Web

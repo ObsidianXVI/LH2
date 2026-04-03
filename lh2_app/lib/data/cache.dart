@@ -4,6 +4,7 @@
 library;
 
 import 'dart:async';
+import '../domain/operations/telemetry.dart';
 
 /// A single cache entry wrapping a value with an optional expiry time.
 class _CacheEntry<T> {
@@ -51,8 +52,10 @@ class GenericCache<T> {
   }) async {
     final entry = _registry[id];
     if (!bypassCache && entry != null && !entry.isExpired) {
+      Telemetry.cacheHit(T.toString(), id);
       return entry.value;
     }
+    Telemetry.cacheMiss(T.toString(), id);
     final value = await _fetcher(id);
     _registry[id] = _CacheEntry(value, ttl: ttl ?? defaultTtl);
     return value;

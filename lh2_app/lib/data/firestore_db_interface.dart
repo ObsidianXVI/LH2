@@ -7,6 +7,7 @@ import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:lh2_stub/lh2_stub.dart';
+import '../domain/operations/telemetry.dart';
 
 typedef JSON = Map<String, Object?>;
 
@@ -86,41 +87,52 @@ class FirestoreDBInterface
 
   @override
   Future<T> getObject<T extends LH2Object>(String id) async {
-    return _dispatch<T>(
+    final startTime = DateTime.now();
+    final result = await _dispatch<T>(
       T,
-      ifProjectGroup: () async =>
-          ProjectGroup.fromJson(
-            (await FS.projectGroups(_db).doc(id).get()).data()!,
-          ) as T,
-      ifProject: () async =>
-          Project.fromJson(
-            (await FS.projects(_db).doc(id).get()).data()!,
-          ) as T,
-      ifDeliverable: () async =>
-          Deliverable.fromJson(
-            (await FS.deliverables(_db).doc(id).get()).data()!,
-          ) as T,
-      ifTask: () async =>
-          Task.fromJson(
-            (await FS.tasks(_db).doc(id).get()).data()!,
-          ) as T,
-      ifSession: () async =>
-          Session.fromJson(
-            (await FS.sessions(_db).doc(id).get()).data()!,
-          ) as T,
-      ifContextRequirement: () async =>
-          ContextRequirement.fromJson(
-            (await FS.contextRequirements(_db).doc(id).get()).data()!,
-          ) as T,
-      ifEvent: () async =>
-          Event.fromJson(
-            (await FS.events(_db).doc(id).get()).data()!,
-          ) as T,
-      ifActualContext: () async =>
-          ActualContext.fromJson(
-            (await FS.actualContexts(_db).doc(id).get()).data()!,
-          ) as T,
+      ifProjectGroup: () async => ProjectGroup.fromJson(
+        (await FS.projectGroups(_db).doc(id).get()).data()!,
+      ) as T,
+      ifProject: () async => Project.fromJson(
+        (await FS.projects(_db).doc(id).get()).data()!,
+      ) as T,
+      ifDeliverable: () async => Deliverable.fromJson(
+        (await FS.deliverables(_db).doc(id).get()).data()!,
+      ) as T,
+      ifTask: () async => Task.fromJson(
+        (await FS.tasks(_db).doc(id).get()).data()!,
+      ) as T,
+      ifSession: () async => Session.fromJson(
+        (await FS.sessions(_db).doc(id).get()).data()!,
+      ) as T,
+      ifContextRequirement: () async => ContextRequirement.fromJson(
+        (await FS.contextRequirements(_db).doc(id).get()).data()!,
+      ) as T,
+      ifEvent: () async => Event.fromJson(
+        (await FS.events(_db).doc(id).get()).data()!,
+      ) as T,
+      ifActualContext: () async => ActualContext.fromJson(
+        (await FS.actualContexts(_db).doc(id).get()).data()!,
+      ) as T,
     );
+    final endTime = DateTime.now();
+    final collection = switch (T) {
+      ProjectGroup => 'projectGroups',
+      Project => 'projects',
+      Deliverable => 'deliverables',
+      Task => 'tasks',
+      Session => 'sessions',
+      ContextRequirement => 'contextRequirements',
+      Event => 'events',
+      ActualContext => 'actualContexts',
+      _ => 'unknown',
+    };
+    Telemetry.firestoreRead(
+      collection,
+      id,
+      endTime.difference(startTime).inMilliseconds,
+    );
+    return result;
   }
 
   @override
@@ -157,18 +169,15 @@ class FirestoreDBInterface
 
     await _dispatch<void>(
       T,
-      ifProjectGroup: () =>
-          newDoc(FS.projectGroups(_db)).set(object.toJson()),
+      ifProjectGroup: () => newDoc(FS.projectGroups(_db)).set(object.toJson()),
       ifProject: () => newDoc(FS.projects(_db)).set(object.toJson()),
-      ifDeliverable: () =>
-          newDoc(FS.deliverables(_db)).set(object.toJson()),
+      ifDeliverable: () => newDoc(FS.deliverables(_db)).set(object.toJson()),
       ifTask: () => newDoc(FS.tasks(_db)).set(object.toJson()),
       ifSession: () => newDoc(FS.sessions(_db)).set(object.toJson()),
       ifContextRequirement: () =>
           newDoc(FS.contextRequirements(_db)).set(object.toJson()),
       ifEvent: () => newDoc(FS.events(_db)).set(object.toJson()),
-      ifActualContext: () =>
-          newDoc(FS.actualContexts(_db)).set(object.toJson()),
+      ifActualContext: () => newDoc(FS.actualContexts(_db)).set(object.toJson()),
     );
 
     return docId;
@@ -183,8 +192,7 @@ class FirestoreDBInterface
       ifDeliverable: () => FS.deliverables(_db).doc(id).delete(),
       ifTask: () => FS.tasks(_db).doc(id).delete(),
       ifSession: () => FS.sessions(_db).doc(id).delete(),
-      ifContextRequirement: () =>
-          FS.contextRequirements(_db).doc(id).delete(),
+      ifContextRequirement: () => FS.contextRequirements(_db).doc(id).delete(),
       ifEvent: () => FS.events(_db).doc(id).delete(),
       ifActualContext: () => FS.actualContexts(_db).doc(id).delete(),
     );
