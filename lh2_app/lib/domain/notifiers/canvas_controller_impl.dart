@@ -396,8 +396,7 @@ abstract class CanvasController extends ChangeNotifier {
 
     return switch (kind) {
       FlowCanvasKind() => FlowCanvasController.fromJson(json),
-      CalendarCanvasKind() => throw UnimplementedError(
-          'CalendarCanvasController not implemented yet'),
+      CalendarCanvasKind() => CalendarCanvasController.fromJson(json),
     };
   }
 
@@ -500,6 +499,75 @@ class FlowCanvasController extends CanvasController {
       (worldPos.dx / gridWorldSize).round() * gridWorldSize,
       (worldPos.dy / gridWorldSize).round() * gridWorldSize,
     );
+  }
+}
+
+/// Calendar canvas controller with time-based scaling and snapping.
+class CalendarCanvasController extends CanvasController {
+  DateTime anchorStartSgt;
+  double minutesPerPixel;
+  int ruleIntervalMinutes;
+
+  CalendarCanvasController({
+    required CanvasViewport viewport,
+    Map<String, CanvasItem>? items,
+    Map<String, CanvasLink>? links,
+    Set<String>? selection,
+    DateTime? anchorStartSgt,
+    this.minutesPerPixel = 1.0,
+    this.ruleIntervalMinutes = 60,
+  }) : anchorStartSgt = anchorStartSgt ?? DateTime(2024, 1, 1) {
+    _viewport = viewport;
+    _items = Map<String, CanvasItem>.from(items ?? {});
+    _links = Map<String, CanvasLink>.from(links ?? {});
+    _selection = Set<String>.from(selection ?? {});
+  }
+
+  factory CalendarCanvasController.fromJson(Map<String, Object?> json) {
+    return CalendarCanvasController(
+      viewport:
+          CanvasViewport.fromJson(json['viewport'] as Map<String, Object?>),
+      anchorStartSgt: json['anchorStartSgt'] != null
+          ? DateTime.parse(json['anchorStartSgt'] as String)
+          : null,
+      minutesPerPixel: (json['minutesPerPixel'] as num?)?.toDouble() ?? 1.0,
+      ruleIntervalMinutes: (json['ruleIntervalMinutes'] as num?)?.toInt() ?? 60,
+    ).._initializeFromJson(json);
+  }
+
+  @override
+  CanvasKind get kind => const CalendarCanvasKind();
+
+  @override
+  CanvasViewport get viewport => _viewport;
+
+  @override
+  Map<String, CanvasItem> get items => Map.unmodifiable(_items);
+
+  @override
+  Map<String, CanvasLink> get links => Map.unmodifiable(_links);
+
+  @override
+  Set<String> get selection => Set.unmodifiable(_selection);
+
+  @override
+  Map<String, Object?> toJson() {
+    return {
+      'kind': kind.toJson(),
+      'viewport': viewport.toJson(),
+      'anchorStartSgt': anchorStartSgt.toIso8601String(),
+      'minutesPerPixel': minutesPerPixel,
+      'ruleIntervalMinutes': ruleIntervalMinutes,
+      'items': _items.map((key, value) => MapEntry(key, value.toJson())),
+      'links': _links.map((key, value) => MapEntry(key, value.toJson())),
+      'selection': _selection.toList(),
+    };
+  }
+
+  void updateScaling(double newMinutesPerPixel, int newRuleInterval) {
+    minutesPerPixel = newMinutesPerPixel;
+    ruleIntervalMinutes = newRuleInterval;
+    notifyListeners();
   }
 }
 
