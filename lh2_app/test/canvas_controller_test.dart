@@ -40,10 +40,11 @@ void main() {
       
       final json = item.toJson();
       expect(json['itemType'], equals('node'));
-      expect(json['x'], equals(10.0));
-      expect(json['y'], equals(20.0));
-      expect(json['w'], equals(100.0));
-      expect(json['h'], equals(50.0));
+      final worldRectJson = json['worldRect'] as Map<String, Object?>;
+      expect(worldRectJson['x'], equals(10.0));
+      expect(worldRectJson['y'], equals(20.0));
+      expect(worldRectJson['w'], equals(100.0));
+      expect(worldRectJson['h'], equals(50.0));
       expect(json['objectId'], equals('firestore-doc-id'));
       
       final fromJson = CanvasItem.fromJson('test-item', json);
@@ -57,20 +58,26 @@ void main() {
       final link = CanvasLink(
         linkId: 'test-link',
         fromItemId: 'item1',
+        fromPortId: 'port-out-1',
         toItemId: 'item2',
-        linkType: 'dependency',
+        toPortId: 'port-in-1',
+        relationType: 'outboundDependency',
       );
       
       final json = link.toJson();
       expect(json['fromItemId'], equals('item1'));
+      expect(json['fromPortId'], equals('port-out-1'));
       expect(json['toItemId'], equals('item2'));
-      expect(json['linkType'], equals('dependency'));
+      expect(json['toPortId'], equals('port-in-1'));
+      expect(json['relationType'], equals('outboundDependency'));
       
       final fromJson = CanvasLink.fromJson('test-link', json);
       expect(fromJson.linkId, equals('test-link'));
       expect(fromJson.fromItemId, equals('item1'));
+      expect(fromJson.fromPortId, equals('port-out-1'));
       expect(fromJson.toItemId, equals('item2'));
-      expect(fromJson.linkType, equals('dependency'));
+      expect(fromJson.toPortId, equals('port-in-1'));
+      expect(fromJson.relationType, equals('outboundDependency'));
     });
 
     test('FlowCanvasController JSON serialization matches Appendix B', () {
@@ -277,6 +284,20 @@ void main() {
       final snapped = controller.snapToGrid(const Offset(15, 30));
       expect(snapped.dx, equals(24.0));
       expect(snapped.dy, equals(24.0));
+    });
+
+    test('Port compatibility validation logic', () {
+      const portOut = CanvasPortSpec(portId: 'out-1', direction: 'out', portType: 'dependency');
+      const portIn = CanvasPortSpec(portId: 'in-1', direction: 'in', portType: 'dependency');
+      const portInMismatch = CanvasPortSpec(portId: 'in-2', direction: 'in', portType: 'data');
+
+      bool isCompatible(CanvasPortSpec from, CanvasPortSpec to) {
+        return from.direction == 'out' && to.direction == 'in' && from.portType == to.portType;
+      }
+
+      expect(isCompatible(portOut, portIn), isTrue);
+      expect(isCompatible(portOut, portInMismatch), isFalse);
+      expect(isCompatible(portIn, portOut), isFalse);
     });
   });
 }

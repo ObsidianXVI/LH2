@@ -19,6 +19,8 @@ import 'package:lh2_app/app/providers.dart';
 import 'package:lh2_app/ui/flow_canvas/grid_background_painter.dart';
 import 'package:lh2_app/ui/flow_canvas/demo_items.dart';
 import 'package:lh2_app/ui/flow_canvas/canvas_provider.dart';
+import 'package:lh2_app/ui/flow_canvas/link_painter.dart';
+import 'package:lh2_app/domain/models/node_template_ports.dart';
 
 /// Flow Canvas widget that renders an infinite scroll canvas with grid background,
 /// pan/zoom interactions, and draggable items.
@@ -139,6 +141,12 @@ class _FlowCanvasViewState extends ConsumerState<FlowCanvasView> {
                     // Canvas items layer
                     _buildItemsLayer(),
 
+                    // Links layer (overlay)
+                    CustomPaint(
+                      painter: LinkPainter(controller: widget.controller),
+                      size: viewportSize,
+                    ),
+
                     // Selection overlay
                     _buildSelectionOverlay(),
 
@@ -191,39 +199,118 @@ class _FlowCanvasViewState extends ConsumerState<FlowCanvasView> {
     final screenRect = _worldRectToScreen(item.worldRect);
     final isSelected = widget.controller.selection.contains(itemId);
     final isEditing = _editingItemId == itemId && item.itemType == 'text';
+    final isLinking = widget.controller.pendingFromItemId != null;
+    final isPotentialTarget = isLinking && widget.controller.isValidLinkTarget(itemId);
+    
+    // Grey out non-valid targets if linking
+    final opacity = (isLinking && !isPotentialTarget && widget.controller.pendingFromItemId != itemId) ? 0.3 : 1.0;
 
     return Positioned(
       left: screenRect.left,
       top: screenRect.top,
       width: screenRect.width,
       height: screenRect.height,
-      child: GestureDetector(
-        onPanStart: (details) => _handleItemDragStart(itemId, details),
-        onPanUpdate: (details) => _handleItemDragUpdate(itemId, details),
-        onTap: () => _handleItemTap(itemId),
-        child: Container(
-          decoration: BoxDecoration(
-            color: LH2Colors.panel,
-            border: Border.all(
-              color: isSelected ? LH2Colors.selectionBlue : LH2Colors.border,
-              width: isSelected ? 2.0 : 1.0,
-            ),
-            borderRadius: BorderRadius.circular(4),
-          ),
-          child: Center(
-            child: item.itemType == 'text'
-                ? (isEditing ? _buildTextEditor(item) : _buildTextDisplay(item))
-                : Text(
-                    item.itemType,
-                    style: const TextStyle(
-                      color: LH2Colors.textPrimary,
-                      fontSize: 12,
-                    ),
+      child: Opacity(
+        opacity: opacity,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            GestureDetector(
+              onPanStart: (details) => _handleItemDragStart(itemId, details),
+              onPanUpdate: (details) => _handleItemDragUpdate(itemId, details),
+              onTap: () => isLinking ? _handleLinkingClick(itemId) : _handleItemTap(itemId),
+              behavior: HitTestBehavior.opaque,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: LH2Colors.panel,
+                  border: Border.all(
+                    color: isSelected ? LH2Colors.selectionBlue : LH2Colors.border,
+                    width: isSelected ? 2.0 : 1.0,
                   ),
-          ),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Center(
+                  child: item.itemType == 'text'
+                      ? (isEditing ? _buildTextEditor(item) : _buildTextDisplay(item))
+                      : Text(
+                          item.itemType,
+                          style: const TextStyle(
+                            color: LH2Colors.textPrimary,
+                            fontSize: 12,
+                          ),
+                        ),
+                ),
+              ),
+            ),
+            if (item.itemType == 'node') ...[
+              // Input port (left)
+              Positioned(
+                left: -6,
+                top: screenRect.height / 2 - 6,
+                child: _buildPort(itemId, 'port-in', Colors.red, isLinking),
+              ),
+              // Output port (right)
+              Positioned(
+                right: -6,
+                top: screenRect.height / 2 - 6,
+                child: _buildPort(itemId, 'port-out', Colors.green, isLinking),
+              ),
+            ],
+          ],
         ),
       ),
     );
+  }
+
+  Widget _buildPort(String itemId, String portId, Color color, bool isLinking) {
+    return GestureDetector(
+      onTap: () => _handlePortTap(itemId, portId),
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        width: 12,
+        height: 12,
+        decoration: BoxDecoration(
+          color: color,
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.white, width: 2),
+        ),
+      ),
+    );
+  }
+
+  void _handlePortTap(String itemId, String portId) {
+    if (portId.contains('out')) {
+      widget.controller.startLinking(itemId, portId);
+    }
+  }
+
+  void _handleLinkingClick(String targetItemId) {
+    final fromItemId = widget.controller.pendingFromItemId;
+    final fromPortId = widget.controller.pendingFromPortId;
+    
+    if (fromItemId != null && fromPortId != null && fromItemId != targetItemId) {
+      _addLink(fromItemId, fromPortId, targetItemId, 'port-in');
+    }
+    widget.controller.cancelLinking();
+  }
+
+  Future<void> _addLink(String fromId, String fromPort, String toId, String toPort) async {
+    final workspaceState = ref.read(workspaceControllerProvider);
+    final workspaceId = workspaceState.workspaceId;
+    final tabId = workspaceState.activeTabId;
+
+    if (workspaceId.isEmpty || tabId == null) return;
+
+    final addLinkOp = ref.read(canvasAddLinkOpProvider);
+    await addLinkOp.run(CanvasAddLinkInput(
+      workspaceId: workspaceId,
+      tabId: tabId,
+      fromItemId: fromId,
+      fromPortId: fromPort,
+      toItemId: toId,
+      toPortId: toPort,
+      relationType: 'outboundDependency',
+    ));
   }
 
   Widget _buildTextDisplay(CanvasItem item) {

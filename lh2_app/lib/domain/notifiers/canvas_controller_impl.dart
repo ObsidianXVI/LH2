@@ -3,6 +3,35 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+/// Canvas port specification.
+class CanvasPortSpec {
+  final String portId;
+  final String direction; // 'in' | 'out'
+  final String portType; // e.g. 'logic' | 'data' | 'dependency'
+
+  const CanvasPortSpec({
+    required this.portId,
+    required this.direction,
+    required this.portType,
+  });
+
+  factory CanvasPortSpec.fromJson(Map<String, Object?> json) {
+    return CanvasPortSpec(
+      portId: json['portId'] as String,
+      direction: json['direction'] as String,
+      portType: json['portType'] as String,
+    );
+  }
+
+  Map<String, Object?> toJson() {
+    return {
+      'portId': portId,
+      'direction': direction,
+      'portType': portType,
+    };
+  }
+}
+
 /// Canvas kind for workspace tabs.
 sealed class CanvasKind {
   const CanvasKind();
@@ -136,30 +165,38 @@ class CanvasItem {
 class CanvasLink {
   final String linkId;
   final String fromItemId;
+  final String fromPortId;
   final String toItemId;
-  final String? linkType;
+  final String toPortId;
+  final String relationType; // e.g. outboundDependency|labelledArrow|...
 
   const CanvasLink({
     required this.linkId,
     required this.fromItemId,
+    required this.fromPortId,
     required this.toItemId,
-    this.linkType,
+    required this.toPortId,
+    required this.relationType,
   });
 
   factory CanvasLink.fromJson(String linkId, Map<String, Object?> json) {
     return CanvasLink(
       linkId: linkId,
       fromItemId: json['fromItemId'] as String,
+      fromPortId: json['fromPortId'] as String,
       toItemId: json['toItemId'] as String,
-      linkType: json['linkType'] as String?,
+      toPortId: json['toPortId'] as String,
+      relationType: json['relationType'] as String,
     );
   }
 
   Map<String, Object?> toJson() {
     return {
       'fromItemId': fromItemId,
+      'fromPortId': fromPortId,
       'toItemId': toItemId,
-      if (linkType != null) 'linkType': linkType,
+      'toPortId': toPortId,
+      'relationType': relationType,
     };
   }
 }
@@ -177,6 +214,35 @@ abstract class CanvasController extends ChangeNotifier {
   Map<String, CanvasItem> get items;
   Map<String, CanvasLink> get links;
   Set<String> get selection;
+
+  /// Active link creation state
+  String? _pendingFromItemId;
+  String? _pendingFromPortId;
+  String? get pendingFromItemId => _pendingFromItemId;
+  String? get pendingFromPortId => _pendingFromPortId;
+
+  void startLinking(String itemId, String portId) {
+    _pendingFromItemId = itemId;
+    _pendingFromPortId = portId;
+    notifyListeners();
+  }
+
+  void cancelLinking() {
+    _pendingFromItemId = null;
+    _pendingFromPortId = null;
+    notifyListeners();
+  }
+
+  /// Check if a target item is a valid connection target
+  bool isValidLinkTarget(String targetItemId) {
+    if (_pendingFromItemId == null || _pendingFromPortId == null) return false;
+    if (_pendingFromItemId == targetItemId) return false;
+
+    // For now, allow any node as a target (simplified validation)
+    // In a full implementation, this would check port compatibility
+    final targetItem = _items[targetItemId];
+    return targetItem != null && targetItem.itemType == 'node';
+  }
 
   /// Convert world coordinates to screen coordinates
   Offset worldToScreen(Offset world) {
@@ -306,6 +372,18 @@ abstract class CanvasController extends ChangeNotifier {
   void removeItem(String itemId) {
     _items.remove(itemId);
     _selection.remove(itemId);
+    notifyListeners();
+  }
+
+  /// Add a link to the canvas
+  void addLink(CanvasLink link) {
+    _links[link.linkId] = link;
+    notifyListeners();
+  }
+
+  /// Remove a link from the canvas
+  void removeLink(String linkId) {
+    _links.remove(linkId);
     notifyListeners();
   }
 

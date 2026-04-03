@@ -265,6 +265,210 @@ final canvasUpdateViewportOpProvider = Provider<CanvasUpdateViewportOp>((ref) {
 });
 
 // ============================================================================
+// api.canvas.addLink
+// ============================================================================
+
+/// Input for [CanvasAddLinkOp].
+class CanvasAddLinkInput {
+  final String workspaceId;
+  final String tabId;
+  final String fromItemId;
+  final String fromPortId;
+  final String toItemId;
+  final String toPortId;
+  final String relationType;
+
+  const CanvasAddLinkInput({
+    required this.workspaceId,
+    required this.tabId,
+    required this.fromItemId,
+    required this.fromPortId,
+    required this.toItemId,
+    required this.toPortId,
+    required this.relationType,
+  });
+
+  Map<String, Object?> toJson() => {
+        'workspaceId': workspaceId,
+        'tabId': tabId,
+        'fromItemId': fromItemId,
+        'fromPortId': fromPortId,
+        'toItemId': toItemId,
+        'toPortId': toPortId,
+        'relationType': relationType,
+      };
+}
+
+/// Output for [CanvasAddLinkOp].
+class CanvasAddLinkOutput {
+  final String linkId;
+
+  const CanvasAddLinkOutput({required this.linkId});
+
+  Map<String, Object?> toJson() => {'linkId': linkId};
+}
+
+/// Adds a new link between canvas items.
+///
+/// Operation ID: api.canvas.addLink
+class CanvasAddLinkOp
+    extends LH2Operation<CanvasAddLinkInput, CanvasAddLinkOutput> {
+  final WorkspaceRepository _repo;
+
+  CanvasAddLinkOp(this._repo);
+
+  @override
+  String get operationId => 'api.canvas.addLink';
+
+  @override
+  Future<LH2OpResult<CanvasAddLinkOutput>> execute(
+    CanvasAddLinkInput input,
+  ) async {
+    try {
+      if (input.workspaceId.isEmpty || input.tabId.isEmpty) {
+        return LH2OpResult.error(
+          createError(
+            errorCode: LH2ErrorCodes.invalidInput,
+            message: 'workspaceId and tabId are required',
+            payload: input.toJson(),
+            isFatal: false,
+          ),
+        );
+      }
+
+      final linkId = 'link_${DateTime.now().millisecondsSinceEpoch}';
+      final linkData = {
+        'linkId': linkId,
+        'fromItemId': input.fromItemId,
+        'fromPortId': input.fromPortId,
+        'toItemId': input.toItemId,
+        'toPortId': input.toPortId,
+        'relationType': input.relationType,
+      };
+
+      final currentTab = await _repo.getTab(input.workspaceId, input.tabId);
+      final updatedLinks = Map<String, Object?>.from(currentTab.links);
+      updatedLinks[linkId] = linkData;
+
+      await _repo.updateTab(
+        input.workspaceId,
+        input.tabId,
+        WorkspaceTabPatch(links: updatedLinks),
+      );
+
+      return LH2OpResult.ok(CanvasAddLinkOutput(linkId: linkId));
+    } catch (e) {
+      return LH2OpResult.error(
+        createError(
+          errorCode: LH2ErrorCodes.databaseError,
+          message: 'Failed to add link: ${e.toString()}',
+          payload: input.toJson(),
+          cause: e,
+          isFatal: true,
+        ),
+      );
+    }
+  }
+}
+
+/// Provider for [CanvasAddLinkOp].
+final canvasAddLinkOpProvider = Provider<CanvasAddLinkOp>((ref) {
+  final repo = ref.watch(workspaceRepoProvider);
+  return CanvasAddLinkOp(repo);
+});
+
+// ============================================================================
+// api.canvas.deleteLink
+// ============================================================================
+
+/// Input for [CanvasDeleteLinkOp].
+class CanvasDeleteLinkInput {
+  final String workspaceId;
+  final String tabId;
+  final String linkId;
+
+  const CanvasDeleteLinkInput({
+    required this.workspaceId,
+    required this.tabId,
+    required this.linkId,
+  });
+
+  Map<String, Object?> toJson() => {
+        'workspaceId': workspaceId,
+        'tabId': tabId,
+        'linkId': linkId,
+      };
+}
+
+/// Output for [CanvasDeleteLinkOp].
+class CanvasDeleteLinkOutput {
+  final bool success;
+
+  const CanvasDeleteLinkOutput({required this.success});
+
+  Map<String, Object?> toJson() => {'success': success};
+}
+
+/// Deletes a link from the canvas.
+///
+/// Operation ID: api.canvas.deleteLink
+class CanvasDeleteLinkOp
+    extends LH2Operation<CanvasDeleteLinkInput, CanvasDeleteLinkOutput> {
+  final WorkspaceRepository _repo;
+
+  CanvasDeleteLinkOp(this._repo);
+
+  @override
+  String get operationId => 'api.canvas.deleteLink';
+
+  @override
+  Future<LH2OpResult<CanvasDeleteLinkOutput>> execute(
+    CanvasDeleteLinkInput input,
+  ) async {
+    try {
+      if (input.workspaceId.isEmpty || input.tabId.isEmpty || input.linkId.isEmpty) {
+        return LH2OpResult.error(
+          createError(
+            errorCode: LH2ErrorCodes.invalidInput,
+            message: 'workspaceId, tabId, and linkId are required',
+            payload: input.toJson(),
+            isFatal: false,
+          ),
+        );
+      }
+
+      final currentTab = await _repo.getTab(input.workspaceId, input.tabId);
+      final updatedLinks = Map<String, Object?>.from(currentTab.links);
+      updatedLinks.remove(input.linkId);
+
+      await _repo.updateTab(
+        input.workspaceId,
+        input.tabId,
+        WorkspaceTabPatch(links: updatedLinks),
+      );
+
+      return LH2OpResult.ok(const CanvasDeleteLinkOutput(success: true));
+    } catch (e) {
+      return LH2OpResult.error(
+        createError(
+          errorCode: LH2ErrorCodes.databaseError,
+          message: 'Failed to delete link: ${e.toString()}',
+          payload: input.toJson(),
+          cause: e,
+          isFatal: true,
+        ),
+      );
+    }
+  }
+}
+
+/// Provider for [CanvasDeleteLinkOp].
+final canvasDeleteLinkOpProvider = Provider<CanvasDeleteLinkOp>((ref) {
+  final repo = ref.watch(workspaceRepoProvider);
+  return CanvasDeleteLinkOp(repo);
+});
+
+// ============================================================================
 // api.canvas.removeItems
 // ============================================================================
 

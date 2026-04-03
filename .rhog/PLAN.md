@@ -830,6 +830,8 @@ Implementation shape:
 
 ###### Task 3.1.1-1: Text widget rendering + editing [L2]
 
+*DONE*
+
 ```text
 Prompt (L2):
 
