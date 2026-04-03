@@ -2,6 +2,7 @@
 ///
 /// Operations:
 ///   - api.objects.get
+///   - api.objects.create
 ///   - api.objects.update
 library;
 
@@ -108,7 +109,8 @@ class ObjectsGetOp extends LH2Operation<ObjectsGetInput, ObjectsGetOutput> {
       return LH2OpResult.error(
         createError(
           errorCode: LH2ErrorCodes.notFound,
-          message: 'Object ${input.objectId} of type ${input.objectType.name} not found',
+          message:
+              'Object ${input.objectId} of type ${input.objectType.name} not found',
           payload: input.toJson(),
           cause: e,
           isFatal: false,
@@ -201,7 +203,8 @@ class ObjectsUpdateOutput {
 /// Updates a domain object.
 ///
 /// Operation ID: api.objects.update
-class ObjectsUpdateOp extends LH2Operation<ObjectsUpdateInput, ObjectsUpdateOutput> {
+class ObjectsUpdateOp
+    extends LH2Operation<ObjectsUpdateInput, ObjectsUpdateOutput> {
   final FirebaseFirestore _firestore;
   final GenericCache<ProjectGroup> _projectGroupCache;
   final GenericCache<Project> _projectCache;
@@ -236,7 +239,8 @@ class ObjectsUpdateOp extends LH2Operation<ObjectsUpdateInput, ObjectsUpdateOutp
   String get operationId => 'api.objects.update';
 
   @override
-  Future<LH2OpResult<ObjectsUpdateOutput>> execute(ObjectsUpdateInput input) async {
+  Future<LH2OpResult<ObjectsUpdateOutput>> execute(
+      ObjectsUpdateInput input) async {
     try {
       if (input.objectId.isEmpty) {
         return LH2OpResult.error(
@@ -275,7 +279,8 @@ class ObjectsUpdateOp extends LH2Operation<ObjectsUpdateInput, ObjectsUpdateOutp
       return LH2OpResult.error(
         createError(
           errorCode: LH2ErrorCodes.notFound,
-          message: 'Object ${input.objectId} of type ${input.objectType.name} not found',
+          message:
+              'Object ${input.objectId} of type ${input.objectType.name} not found',
           payload: input.toJson(),
           cause: e,
           isFatal: false,
@@ -341,7 +346,9 @@ class ObjectsUpdateOp extends LH2Operation<ObjectsUpdateInput, ObjectsUpdateOutp
       ObjectType.actualContext => FS.actualContexts(_firestore),
     };
 
-    await collection.doc(id).update(data);
+    // Use set(merge:true) so updates work as an upsert during early dev / when
+    // nodes exist on canvas but their backing object doc hasn't been created yet.
+    await collection.doc(id).set(data, SetOptions(merge: true));
   }
 }
 
@@ -358,4 +365,97 @@ final objectsUpdateOpProvider = Provider<ObjectsUpdateOp>((ref) {
     eventCache: ref.watch(eventCacheProvider),
     actualContextCache: ref.watch(actualContextCacheProvider),
   );
+});
+
+// ============================================================================
+// api.objects.create
+// ============================================================================
+
+/// Input for [ObjectsCreateOp].
+class ObjectsCreateInput {
+  final ObjectType objectType;
+  final Map<String, Object?> data;
+
+  const ObjectsCreateInput({
+    required this.objectType,
+    required this.data,
+  });
+
+  Map<String, Object?> toJson() => {
+        'objectType': objectType.name,
+        'data': data,
+      };
+}
+
+/// Output for [ObjectsCreateOp].
+class ObjectsCreateOutput {
+  final String objectId;
+
+  const ObjectsCreateOutput({required this.objectId});
+
+  Map<String, Object?> toJson() => {'objectId': objectId};
+}
+
+/// Creates a new domain object document and returns its generated id.
+///
+/// Operation ID: api.objects.create
+class ObjectsCreateOp
+    extends LH2Operation<ObjectsCreateInput, ObjectsCreateOutput> {
+  final FirebaseFirestore _firestore;
+
+  ObjectsCreateOp({required FirebaseFirestore firestore})
+      : _firestore = firestore;
+
+  @override
+  String get operationId => 'api.objects.create';
+
+  @override
+  Future<LH2OpResult<ObjectsCreateOutput>> execute(
+      ObjectsCreateInput input) async {
+    try {
+      if (input.data.isEmpty) {
+        return LH2OpResult.error(
+          createError(
+            errorCode: LH2ErrorCodes.invalidInput,
+            message: 'Create data cannot be empty',
+            payload: input.toJson(),
+            isFatal: false,
+          ),
+        );
+      }
+
+      final collection = switch (input.objectType) {
+        ObjectType.projectGroup => FS.projectGroups(_firestore),
+        ObjectType.project => FS.projects(_firestore),
+        ObjectType.deliverable => FS.deliverables(_firestore),
+        ObjectType.task => FS.tasks(_firestore),
+        ObjectType.session => FS.sessions(_firestore),
+        ObjectType.contextRequirement => FS.contextRequirements(_firestore),
+        ObjectType.event => FS.events(_firestore),
+        ObjectType.actualContext => FS.actualContexts(_firestore),
+      };
+
+      final ref = collection.doc();
+      await ref.set({
+        ...input.data,
+        'type': input.objectType.name,
+      });
+
+      return LH2OpResult.ok(ObjectsCreateOutput(objectId: ref.id));
+    } catch (e) {
+      return LH2OpResult.error(
+        createError(
+          errorCode: LH2ErrorCodes.databaseError,
+          message: 'Failed to create object: ${e.toString()}',
+          payload: input.toJson(),
+          cause: e,
+          isFatal: true,
+        ),
+      );
+    }
+  }
+}
+
+final objectsCreateOpProvider = Provider<ObjectsCreateOp>((ref) {
+  return ObjectsCreateOp(firestore: ref.watch(firestoreProvider));
 });

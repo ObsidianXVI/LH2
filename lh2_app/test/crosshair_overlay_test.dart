@@ -5,6 +5,30 @@ import 'package:lh2_app/ui/crosshair_overlay.dart';
 import 'package:lh2_app/domain/notifiers/crosshair_mode_controller.dart';
 import 'package:lh2_app/ui/flow_canvas/canvas_provider.dart';
 import 'package:lh2_app/domain/notifiers/canvas_controller_impl.dart';
+import 'package:lh2_stub/lh2_stub.dart';
+import 'package:lh2_app/domain/operations/objects.dart';
+import 'package:lh2_app/domain/operations/core.dart';
+
+class ManualMockObjectsGetOp implements ObjectsGetOp {
+  final LH2Object resultObject;
+  ManualMockObjectsGetOp(this.resultObject);
+
+  @override
+  String get operationId => 'mock.get';
+
+  @override
+  Future<LH2OpResult<ObjectsGetOutput>> run(ObjectsGetInput input) async {
+    return execute(input);
+  }
+
+  @override
+  Future<LH2OpResult<ObjectsGetOutput>> execute(ObjectsGetInput input) async {
+    return LH2OpResult.ok(ObjectsGetOutput(object: resultObject));
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
 
 void main() {
   group('CrosshairOverlay Widget Tests', () {
@@ -28,8 +52,16 @@ void main() {
       tester.view.devicePixelRatio = 1.0;
       addTearDown(() => tester.view.resetPhysicalSize());
 
+      final project = Project(
+        name: 'Test Project',
+        deliverablesIds: [],
+        nonDeliverableTasksIds: [],
+      );
+      final mockGetOp = ManualMockObjectsGetOp(project);
+
       final container = ProviderContainer(
         overrides: [
+          objectsGetOpProvider.overrideWithValue(mockGetOp),
           activeCanvasControllerProvider.overrideWithValue(
             FlowCanvasController(
               viewport: const CanvasViewport(
@@ -40,7 +72,9 @@ void main() {
               items: {
                 'node1': CanvasItem(
                   itemId: 'node1',
-                  itemType: 'node',
+                  itemType: 'project',
+                  objectId: 'project-1',
+                  objectType: 'project',
                   worldRect: const Rect.fromLTWH(0, 0, 100, 100),
                 ),
               },
@@ -61,12 +95,19 @@ void main() {
       );
 
       container.read(crosshairModeControllerProvider.notifier).setEnabled(true);
-      container.read(crosshairModeControllerProvider.notifier).setHoveredItemId('node1');
+      container
+          .read(crosshairModeControllerProvider.notifier)
+          .setHoveredItemId('node1');
 
-      await tester.pump();
+      await tester.pump(); // Start future
+      await tester.pump(); // Complete future
 
       expect(find.text('Crosshair Mode'), findsOneWidget);
-      expect(find.text('Item ID: node1'), findsOneWidget);
+      // Title is now an editable TextFormField in editable mode.
+      final titleField = find.byType(TextFormField);
+      expect(titleField, findsAtLeast(1));
+      final tf = tester.widget<TextFormField>(titleField.first);
+      expect(tf.initialValue, 'Test Project');
     });
   });
 }

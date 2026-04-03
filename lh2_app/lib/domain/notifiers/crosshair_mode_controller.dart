@@ -6,12 +6,14 @@ class CrosshairModeState {
   final String? hoveredItemId;
   final String? lastHoveredItemId;
   final Map<String, Object?>? linkDraft;
+  final bool panelHovered;
 
   const CrosshairModeState({
     this.enabled = false,
     this.hoveredItemId,
     this.lastHoveredItemId,
     this.linkDraft,
+    this.panelHovered = false,
   });
 
   CrosshairModeState copyWith({
@@ -19,12 +21,14 @@ class CrosshairModeState {
     String? hoveredItemId,
     String? lastHoveredItemId,
     Map<String, Object?>? linkDraft,
+    bool? panelHovered,
   }) {
     return CrosshairModeState(
       enabled: enabled ?? this.enabled,
       hoveredItemId: hoveredItemId ?? this.hoveredItemId,
       lastHoveredItemId: lastHoveredItemId ?? this.lastHoveredItemId,
       linkDraft: linkDraft ?? this.linkDraft,
+      panelHovered: panelHovered ?? this.panelHovered,
     );
   }
 }
@@ -47,12 +51,13 @@ class CrosshairModeController extends Notifier<CrosshairModeState> {
   void setHoveredItemId(String? itemId) {
     // Preserve the last hovered item ID when cursor moves off nodes
     final newLastHoveredItemId = itemId ?? state.lastHoveredItemId;
-    
+
     state = CrosshairModeState(
       enabled: state.enabled,
       hoveredItemId: itemId,
       lastHoveredItemId: newLastHoveredItemId,
       linkDraft: state.linkDraft,
+      panelHovered: state.panelHovered,
     );
   }
 
@@ -62,6 +67,17 @@ class CrosshairModeController extends Notifier<CrosshairModeState> {
       hoveredItemId: state.hoveredItemId,
       lastHoveredItemId: state.lastHoveredItemId,
       linkDraft: draft,
+      panelHovered: state.panelHovered,
+    );
+  }
+
+  void setPanelHovered(bool hovered) {
+    state = CrosshairModeState(
+      enabled: state.enabled,
+      hoveredItemId: state.hoveredItemId,
+      lastHoveredItemId: state.lastHoveredItemId,
+      linkDraft: state.linkDraft,
+      panelHovered: hovered,
     );
   }
 

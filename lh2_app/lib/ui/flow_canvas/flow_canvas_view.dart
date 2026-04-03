@@ -17,6 +17,7 @@ import 'package:lh2_app/ui/crosshair_overlay.dart';
 import 'package:lh2_app/domain/notifiers/crosshair_mode_controller.dart';
 import 'package:lh2_app/domain/notifiers/info_popup_controller.dart';
 import 'package:lh2_app/domain/notifiers/marquee_selection_controller.dart';
+import 'package:lh2_stub/lh2_stub.dart';
 import 'package:lh2_app/app/providers.dart';
 import 'package:lh2_app/ui/flow_canvas/grid_background_painter.dart';
 import 'package:lh2_app/ui/flow_canvas/demo_items.dart';
@@ -309,14 +310,16 @@ class _FlowCanvasViewState extends ConsumerState<FlowCanvasView> {
                                   : (isSelected
                                       ? LH2Colors.selectionBlue
                                       : LH2Colors.border),
-                              width: isHighlighted ? 3.0 : (isSelected ? 2.0 : 1.0),
+                              width: isHighlighted
+                                  ? 3.0
+                                  : (isSelected ? 2.0 : 1.0),
                             ),
                             borderRadius: BorderRadius.circular(4),
                             boxShadow: isHighlighted
                                 ? [
                                     BoxShadow(
-                                      color:
-                                          LH2Colors.selectionBlue.withOpacity(0.12),
+                                      color: LH2Colors.selectionBlue
+                                          .withOpacity(0.12),
                                       blurRadius: 8.0,
                                     )
                                   ]
@@ -342,7 +345,8 @@ class _FlowCanvasViewState extends ConsumerState<FlowCanvasView> {
                           ),
                         ),
                 ),
-                if (item.itemType == 'node') ..._buildItemPorts(itemId, item, screenRect, isLinking),
+                if (item.itemType == 'node')
+                  ..._buildItemPorts(itemId, item, screenRect, isLinking),
               ],
             ),
           )),
@@ -478,16 +482,39 @@ class _FlowCanvasViewState extends ConsumerState<FlowCanvasView> {
   }
 
   String _inferObjectType(CanvasItem item) {
+    return _inferObjectTypeEnum(item).name;
+  }
+
+  ObjectType _inferObjectTypeEnum(CanvasItem item) {
+    final declared = item.objectType;
+    if (declared != null) {
+      try {
+        return ObjectType.values.byName(declared);
+      } catch (_) {
+        // ignore and fall back
+      }
+    }
+
     final objectId = item.objectId;
-    if (objectId == null) return 'default';
-    if (objectId.startsWith('project')) return 'project';
-    if (objectId.startsWith('task')) return 'task';
-    if (objectId.startsWith('deliverable')) return 'deliverable';
-    if (objectId.startsWith('session')) return 'session';
-    if (objectId.startsWith('event')) return 'event';
-    if (objectId.startsWith('contextRequirement')) return 'contextRequirement';
-    if (objectId.startsWith('actualContext')) return 'actualContext';
-    return 'default';
+    if (objectId != null) {
+      // NOTE: Firestore object IDs are random strings, so prefix inference is
+      // not reliable in production. Kept only for legacy/demo cases.
+      if (objectId.startsWith('project')) return ObjectType.project;
+      if (objectId.startsWith('task')) return ObjectType.task;
+      if (objectId.startsWith('deliverable')) return ObjectType.deliverable;
+      if (objectId.startsWith('session')) return ObjectType.session;
+      if (objectId.startsWith('event')) return ObjectType.event;
+      if (objectId.startsWith('contextRequirement')) {
+        return ObjectType.contextRequirement;
+      }
+      if (objectId.startsWith('actualContext')) return ObjectType.actualContext;
+    }
+    // Try byName if itemType looks like an ObjectType
+    try {
+      return ObjectType.values.byName(item.itemType);
+    } catch (_) {
+      return ObjectType.project; // Fallback
+    }
   }
 
   Future<void> _addLink(
@@ -927,7 +954,11 @@ class _FlowCanvasViewState extends ConsumerState<FlowCanvasView> {
     final infoState = ref.read(infoPopupControllerProvider);
 
     if (crosshairState.enabled) {
-      crosshairNotifier.setHoveredItemId(hitItemId);
+      // When the crosshair panel itself is hovered, don't update hovered item
+      // based on canvas mouse movement (avoids focus loss while editing).
+      if (!crosshairState.panelHovered) {
+        crosshairNotifier.setHoveredItemId(hitItemId);
+      }
     } else {
       if (_hoveredItemId != hitItemId) {
         _hoveredItemId = hitItemId;
@@ -937,6 +968,7 @@ class _FlowCanvasViewState extends ConsumerState<FlowCanvasView> {
           infoController.openViewMode(
             itemId: hitItemId,
             anchorScreenRect: screenRect,
+            objectType: _inferObjectTypeEnum(hitItem),
           );
         } else {
           _hoverCloseTimer?.cancel();
@@ -982,7 +1014,8 @@ class _FlowCanvasViewState extends ConsumerState<FlowCanvasView> {
     return Rect.fromPoints(topLeft, bottomRight);
   }
 
-  List<Widget> _buildItemPorts(String itemId, CanvasItem item, Rect screenRect, bool isLinking) {
+  List<Widget> _buildItemPorts(
+      String itemId, CanvasItem item, Rect screenRect, bool isLinking) {
     // For now we use hardcoded ports for 'node' type items.
     // In a real app, these would come from the NodeTemplate.
     final ports = <Widget>[];
@@ -1013,7 +1046,8 @@ class _FlowCanvasViewState extends ConsumerState<FlowCanvasView> {
         Positioned(
           left: (screenRect.width / 2) - halfHitArea,
           bottom: -halfHitArea,
-          child: _buildPort(itemId, 'port-conditional', Colors.orange, isLinking),
+          child:
+              _buildPort(itemId, 'port-conditional', Colors.orange, isLinking),
         ),
       );
     }

@@ -167,6 +167,126 @@ final canvasAddItemOpProvider = Provider<CanvasAddItemOp>((ref) {
 });
 
 // ============================================================================
+// api.canvas.patchItem
+// ============================================================================
+
+/// Input for [CanvasPatchItemOp].
+class CanvasPatchItemInput {
+  final String workspaceId;
+  final String tabId;
+  final String itemId;
+
+  /// Partial patch applied to the item JSON.
+  final JSON patch;
+
+  const CanvasPatchItemInput({
+    required this.workspaceId,
+    required this.tabId,
+    required this.itemId,
+    required this.patch,
+  });
+
+  Map<String, Object?> toJson() => {
+        'workspaceId': workspaceId,
+        'tabId': tabId,
+        'itemId': itemId,
+        'patch': patch,
+      };
+}
+
+/// Output for [CanvasPatchItemOp].
+class CanvasPatchItemOutput {
+  final bool success;
+
+  const CanvasPatchItemOutput({required this.success});
+
+  Map<String, Object?> toJson() => {'success': success};
+}
+
+/// Patch a single canvas item's JSON (e.g. attach an objectId after creating an object).
+///
+/// Operation ID: api.canvas.patchItem
+class CanvasPatchItemOp
+    extends LH2Operation<CanvasPatchItemInput, CanvasPatchItemOutput> {
+  final WorkspaceRepository _repo;
+
+  CanvasPatchItemOp(this._repo);
+
+  @override
+  String get operationId => 'api.canvas.patchItem';
+
+  @override
+  Future<LH2OpResult<CanvasPatchItemOutput>> execute(
+      CanvasPatchItemInput input) async {
+    try {
+      if (input.workspaceId.isEmpty || input.tabId.isEmpty) {
+        return LH2OpResult.error(
+          createError(
+            errorCode: LH2ErrorCodes.invalidInput,
+            message: 'workspaceId and tabId are required',
+            payload: input.toJson(),
+            isFatal: false,
+          ),
+        );
+      }
+      if (input.itemId.isEmpty) {
+        return LH2OpResult.error(
+          createError(
+            errorCode: LH2ErrorCodes.invalidInput,
+            message: 'itemId is required',
+            payload: input.toJson(),
+            isFatal: false,
+          ),
+        );
+      }
+
+      final tab = await _repo.getTab(input.workspaceId, input.tabId);
+      final updatedItems = Map<String, Object?>.from(tab.items);
+      final existing =
+          (updatedItems[input.itemId] as Map?)?.cast<String, Object?>();
+      if (existing == null) {
+        return LH2OpResult.error(
+          createError(
+            errorCode: LH2ErrorCodes.notFound,
+            message: 'Canvas item ${input.itemId} not found',
+            payload: input.toJson(),
+            isFatal: false,
+          ),
+        );
+      }
+
+      updatedItems[input.itemId] = {
+        ...existing,
+        ...input.patch,
+      };
+
+      await _repo.updateTab(
+        input.workspaceId,
+        input.tabId,
+        WorkspaceTabPatch(items: updatedItems),
+      );
+
+      return LH2OpResult.ok(const CanvasPatchItemOutput(success: true));
+    } catch (e) {
+      return LH2OpResult.error(
+        createError(
+          errorCode: LH2ErrorCodes.databaseError,
+          message: 'Failed to patch canvas item: ${e.toString()}',
+          payload: input.toJson(),
+          cause: e,
+          isFatal: true,
+        ),
+      );
+    }
+  }
+}
+
+final canvasPatchItemOpProvider = Provider<CanvasPatchItemOp>((ref) {
+  final repo = ref.watch(workspaceRepoProvider);
+  return CanvasPatchItemOp(repo);
+});
+
+// ============================================================================
 // api.canvas.updateViewport
 // ============================================================================
 

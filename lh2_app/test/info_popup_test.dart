@@ -42,12 +42,14 @@ void main() {
       notifier.openViewMode(
         itemId: 'existing_item',
         anchorScreenRect: const Rect.fromLTWH(100, 100, 20, 20),
+        objectType: ObjectType.task,
       );
 
       final state = container.read(infoPopupControllerProvider);
       expect(state.isOpen, true);
       expect(state.mode, InfoPopupMode.view);
       expect(state.itemId, 'existing_item');
+      expect(state.objectType, ObjectType.task);
     });
 
     test('close() resets isOpen and isHovered', () {
@@ -55,7 +57,11 @@ void main() {
       addTearDown(container.dispose);
       final notifier = container.read(infoPopupControllerProvider.notifier);
 
-      notifier.openViewMode(itemId: 'id', anchorScreenRect: Rect.zero);
+      notifier.openViewMode(
+        itemId: 'id',
+        anchorScreenRect: Rect.zero,
+        objectType: ObjectType.task,
+      );
       notifier.setIsHovered(true);
       
       notifier.close();

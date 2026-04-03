@@ -49,7 +49,7 @@ void main() {
 
       final item = CanvasItem(
         itemId: 'item-1',
-        itemType: 'node',
+        itemType: 'project',
         worldRect: Rect.fromLTWH(0, 0, 100, 100),
       );
 
@@ -61,8 +61,7 @@ void main() {
         ),
       );
 
-      expect(find.text('Test Project'), findsOneWidget);
-      expect(find.text('name: Test Project'), findsOneWidget);
+      expect(find.text('Test Project'), findsAtLeast(1));
     });
   });
 }

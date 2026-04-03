@@ -232,24 +232,47 @@ final workspaceIdProvider = FutureProvider<String>((ref) async {
 });
 
 /// General object provider that fetches an object by its type and ID.
-final objectProvider = FutureProvider.family<LH2Object?, (ObjectType, String)>((ref, params) async {
+/// Uses autoDispose to allow proper refresh when cache is invalidated.
+final objectProvider = FutureProvider.autoDispose.family<LH2Object?, (ObjectType, String)>((ref, params) async {
   final (type, id) = params;
+  
+  // Listen to cache changes to auto-refresh
   switch (type) {
     case ObjectType.project:
-      return ref.watch(projectCacheProvider).get(id);
+      ref.watch(projectCacheProvider);
     case ObjectType.task:
-      return ref.watch(taskCacheProvider).get(id);
+      ref.watch(taskCacheProvider);
     case ObjectType.deliverable:
-      return ref.watch(deliverableCacheProvider).get(id);
+      ref.watch(deliverableCacheProvider);
     case ObjectType.session:
-      return ref.watch(sessionCacheProvider).get(id);
+      ref.watch(sessionCacheProvider);
     case ObjectType.event:
-      return ref.watch(eventCacheProvider).get(id);
+      ref.watch(eventCacheProvider);
     case ObjectType.contextRequirement:
-      return ref.watch(contextRequirementCacheProvider).get(id);
+      ref.watch(contextRequirementCacheProvider);
     case ObjectType.actualContext:
-      return ref.watch(actualContextCacheProvider).get(id);
+      ref.watch(actualContextCacheProvider);
     case ObjectType.projectGroup:
-      return ref.watch(projectGroupCacheProvider).get(id);
+      ref.watch(projectGroupCacheProvider);
+  }
+  
+  // Now fetch from cache (which will re-fetch from Firestore if invalidated)
+  switch (type) {
+    case ObjectType.project:
+      return ref.read(projectCacheProvider).get(id);
+    case ObjectType.task:
+      return ref.read(taskCacheProvider).get(id);
+    case ObjectType.deliverable:
+      return ref.read(deliverableCacheProvider).get(id);
+    case ObjectType.session:
+      return ref.read(sessionCacheProvider).get(id);
+    case ObjectType.event:
+      return ref.read(eventCacheProvider).get(id);
+    case ObjectType.contextRequirement:
+      return ref.read(contextRequirementCacheProvider).get(id);
+    case ObjectType.actualContext:
+      return ref.read(actualContextCacheProvider).get(id);
+    case ObjectType.projectGroup:
+      return ref.read(projectGroupCacheProvider).get(id);
   }
 });

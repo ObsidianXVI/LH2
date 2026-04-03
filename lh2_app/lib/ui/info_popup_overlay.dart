@@ -4,6 +4,11 @@ import 'package:lh2_app/domain/notifiers/info_popup_controller.dart';
 import 'package:lh2_app/ui/theme/tokens.dart';
 import 'package:lh2_app/app/theme.dart';
 import 'package:lh2_app/domain/notifiers/crosshair_mode_controller.dart';
+import 'package:lh2_app/ui/node_form_overlay.dart';
+import 'package:lh2_stub/lh2_stub.dart';
+import 'package:lh2_app/domain/operations/objects.dart';
+import 'package:lh2_app/domain/operations/core.dart';
+import 'package:lh2_app/ui/flow_canvas/canvas_provider.dart';
 
 /// Overlay widget for the information popup.
 class InfoPopupOverlay extends ConsumerWidget {
@@ -13,6 +18,13 @@ class InfoPopupOverlay extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(infoPopupControllerProvider);
     final crosshairState = ref.watch(crosshairModeControllerProvider);
+
+    // Close info popup when Crosshair Mode is enabled
+    if (crosshairState.enabled && state.isOpen) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ref.read(infoPopupControllerProvider.notifier).close();
+      });
+    }
 
     if (!state.isOpen || state.anchorScreenRect == null) {
       return const SizedBox.shrink();
@@ -29,7 +41,8 @@ class InfoPopupOverlay extends ConsumerWidget {
         if (state.mode == InfoPopupMode.add)
           Positioned.fill(
             child: GestureDetector(
-              onTap: () => ref.read(infoPopupControllerProvider.notifier).close(),
+              onTap: () =>
+                  ref.read(infoPopupControllerProvider.notifier).close(),
               child: Container(color: Colors.transparent),
             ),
           ),
@@ -37,8 +50,9 @@ class InfoPopupOverlay extends ConsumerWidget {
           left: left,
           top: top,
           child: MouseRegion(
-            onEnter: (_) =>
-                ref.read(infoPopupControllerProvider.notifier).setIsHovered(true),
+            onEnter: (_) => ref
+                .read(infoPopupControllerProvider.notifier)
+                .setIsHovered(true),
             onExit: (_) => ref
                 .read(infoPopupControllerProvider.notifier)
                 .setIsHovered(false),
@@ -57,17 +71,18 @@ class InfoPopupOverlay extends ConsumerWidget {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          state.mode == InfoPopupMode.add
-                              ? 'Configure New Node'
-                              : 'Node Information',
-                          style: LH2Theme.nodeTitle,
-                          overflow: TextOverflow.ellipsis,
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            state.mode == InfoPopupMode.add
+                                ? 'Configure New Node'
+                                : 'Node Information',
+                            style: LH2Theme.nodeTitle.copyWith(
+                                fontSize: 12, color: LH2Colors.textSecondary),
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
-                      ),
                         if (!crosshairState.enabled)
                           IconButton(
                             icon:
@@ -76,7 +91,7 @@ class InfoPopupOverlay extends ConsumerWidget {
                                 .read(crosshairModeControllerProvider.notifier)
                                 .setEnabled(true),
                           ),
-                        const Spacer(),
+                        const SizedBox(width: 4),
                         IconButton(
                           icon: const Icon(Icons.close, size: 18),
                           onPressed: () => ref
@@ -87,32 +102,15 @@ class InfoPopupOverlay extends ConsumerWidget {
                     ),
                     const Divider(),
                     const SizedBox(height: 8),
-                    Text('Item ID: ${state.itemId}', style: LH2Theme.body),
-                    Text('Type: ${state.objectType?.name}',
-                        style: LH2Theme.body),
-                    const SizedBox(height: 16),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        TextButton(
-                          onPressed: () => ref
-                              .read(infoPopupControllerProvider.notifier)
-                              .close(),
-                          child: const Text('Cancel'),
-                        ),
-                        const SizedBox(width: 8),
-                        ElevatedButton(
-                          onPressed: () => ref
-                              .read(infoPopupControllerProvider.notifier)
-                              .close(),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: LH2Colors.accentBlue,
-                            foregroundColor: Colors.white,
-                          ),
-                          child: const Text('Save'),
-                        ),
-                      ],
-                    ),
+                    if (state.itemId != null && state.objectType != null)
+                      _InfoPopupContent(
+                        itemId: state.itemId!,
+                        objectType: state.objectType!,
+                        isEditable: true, // Always editable (add or view mode)
+                        onClose: () => ref
+                            .read(infoPopupControllerProvider.notifier)
+                            .close(),
+                      ),
                   ],
                 ),
               ),
@@ -121,5 +119,157 @@ class InfoPopupOverlay extends ConsumerWidget {
         ),
       ],
     );
+  }
+}
+
+class _InfoPopupContent extends ConsumerWidget {
+  final String itemId;
+  final ObjectType objectType;
+  final bool isEditable;
+  final VoidCallback onClose;
+
+  const _InfoPopupContent({
+    required this.itemId,
+    required this.objectType,
+    required this.isEditable,
+    required this.onClose,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final getOp = ref.watch(objectsGetOpProvider);
+    final canvasController = ref.watch(activeCanvasControllerProvider);
+    final canvasItem = canvasController?.items[itemId];
+    final objectId = canvasItem?.objectId;
+
+    // If the canvas item hasn't been assigned a Firestore objectId yet (common
+    // right after creating a node), render a placeholder form instead of
+    // attempting to load from Firestore.
+    if (objectId == null || objectId.isEmpty) {
+      return NodeFormOverlay(
+        object: _createPlaceholderObject(objectType),
+        objectId: null,
+        canvasItemId: itemId,
+        isEditable: isEditable,
+        onSave: onClose,
+      );
+    }
+
+    return FutureBuilder<LH2OpResult<ObjectsGetOutput>>(
+      future: _fetchWithRetry(getOp, objectId),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done ||
+            snapshot.data == null) {
+          return const Center(
+              child: Padding(
+                  padding: EdgeInsets.all(16.0),
+                  child: CircularProgressIndicator()));
+        }
+
+        if (snapshot.hasError || snapshot.data?.ok == false) {
+          return Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Text(
+                'Error loading object: ${snapshot.error ?? snapshot.data?.error?.message}',
+                style: LH2Theme.body.copyWith(color: LH2Colors.dangerRed)),
+          );
+        }
+
+        final object = snapshot.data!.value!.object;
+
+        return NodeFormOverlay(
+          object: object,
+          objectId: objectId,
+          canvasItemId: itemId,
+          isEditable: isEditable,
+          onSave: onClose,
+        );
+      },
+    );
+  }
+
+  Future<LH2OpResult<ObjectsGetOutput>> _fetchWithRetry(
+    ObjectsGetOp getOp,
+    String objectId,
+  ) async {
+    // Initial fetch
+    var result = await getOp
+        .execute(ObjectsGetInput(objectId: objectId, objectType: objectType));
+
+    // If it fails with not found, retry a few times for newly created nodes
+    // to allow Firestore propagation.
+    int retries = 3;
+    while (!result.ok && retries > 0) {
+      await Future.delayed(const Duration(milliseconds: 500));
+      result = await getOp
+          .execute(ObjectsGetInput(objectId: objectId, objectType: objectType));
+      retries--;
+    }
+    return result;
+  }
+
+  LH2Object _createPlaceholderObject(ObjectType type) {
+    switch (type) {
+      case ObjectType.project:
+        return const Project(
+          name: 'New Project',
+          deliverablesIds: [],
+          nonDeliverableTasksIds: [],
+        );
+      case ObjectType.task:
+        return const Task(
+          name: 'New Task',
+          sessionsIds: [],
+          taskStatus: TaskStatus.draft,
+          outboundDependenciesIds: [],
+        );
+      case ObjectType.deliverable:
+        return Deliverable(
+          name: 'New Deliverable',
+          tasksIds: [],
+          deadlineTs: DateTime.now().millisecondsSinceEpoch,
+        );
+      case ObjectType.session:
+        return Session(
+          description: 'New Session',
+          scheduledTs: DateTime.now().millisecondsSinceEpoch,
+          contextRequirement: const ContextRequirement(
+            focusLevel: 0.5,
+            contiguousMinutesNeeded: 30,
+            resourceTags: {},
+          ),
+        );
+      case ObjectType.event:
+        return Event(
+          name: 'New Event',
+          description: '',
+          calendar: 'default',
+          startTs: DateTime.now().millisecondsSinceEpoch,
+          endTs: DateTime.now().millisecondsSinceEpoch + 3600000,
+          allDay: false,
+          actualContext: const ActualContext(
+            focusLevel: 0.5,
+            contiguousMinutesAvailable: 60,
+            resourceTags: {},
+          ),
+        );
+      case ObjectType.contextRequirement:
+        return const ContextRequirement(
+          focusLevel: 0.5,
+          contiguousMinutesNeeded: 30,
+          resourceTags: {},
+        );
+      case ObjectType.actualContext:
+        return const ActualContext(
+          focusLevel: 0.5,
+          contiguousMinutesAvailable: 60,
+          resourceTags: {},
+        );
+      case ObjectType.projectGroup:
+        return const ProjectGroup(
+          name: 'New Group',
+          projectsIds: [],
+        );
+    }
   }
 }

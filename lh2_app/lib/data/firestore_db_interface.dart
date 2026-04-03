@@ -24,7 +24,11 @@ class FS {
     String name,
   ) =>
       db.collection(name).withConverter<JSON>(
-            fromFirestore: (snap, _) => snap.data()!,
+            // If the document does not exist, snap.data() is null.
+            // Returning an empty map prevents "Unexpected null value" exceptions
+            // from propagating into UI code; callers should still check
+            // DocumentSnapshot.exists to handle not-found.
+            fromFirestore: (snap, _) => snap.data() ?? <String, Object?>{},
             toFirestore: (data, _) => data,
           );
 
@@ -88,32 +92,34 @@ class FirestoreDBInterface
   @override
   Future<T> getObject<T extends LH2Object>(String id) async {
     final startTime = DateTime.now();
+    Future<JSON> _getOrThrow(CollectionReference<JSON> col) async {
+      final snap = await col.doc(id).get();
+      final data = snap.data();
+      if (!snap.exists || data == null) {
+        throw StateError('Object not found: ${snap.reference.path}');
+      }
+      return data;
+    }
+
     final result = await _dispatch<T>(
       T,
-      ifProjectGroup: () async => ProjectGroup.fromJson(
-        (await FS.projectGroups(_db).doc(id).get()).data()!,
-      ) as T,
-      ifProject: () async => Project.fromJson(
-        (await FS.projects(_db).doc(id).get()).data()!,
-      ) as T,
-      ifDeliverable: () async => Deliverable.fromJson(
-        (await FS.deliverables(_db).doc(id).get()).data()!,
-      ) as T,
-      ifTask: () async => Task.fromJson(
-        (await FS.tasks(_db).doc(id).get()).data()!,
-      ) as T,
-      ifSession: () async => Session.fromJson(
-        (await FS.sessions(_db).doc(id).get()).data()!,
-      ) as T,
+      ifProjectGroup: () async =>
+          ProjectGroup.fromJson(await _getOrThrow(FS.projectGroups(_db))) as T,
+      ifProject: () async =>
+          Project.fromJson(await _getOrThrow(FS.projects(_db))) as T,
+      ifDeliverable: () async =>
+          Deliverable.fromJson(await _getOrThrow(FS.deliverables(_db))) as T,
+      ifTask: () async => Task.fromJson(await _getOrThrow(FS.tasks(_db))) as T,
+      ifSession: () async =>
+          Session.fromJson(await _getOrThrow(FS.sessions(_db))) as T,
       ifContextRequirement: () async => ContextRequirement.fromJson(
-        (await FS.contextRequirements(_db).doc(id).get()).data()!,
+        await _getOrThrow(FS.contextRequirements(_db)),
       ) as T,
-      ifEvent: () async => Event.fromJson(
-        (await FS.events(_db).doc(id).get()).data()!,
-      ) as T,
-      ifActualContext: () async => ActualContext.fromJson(
-        (await FS.actualContexts(_db).doc(id).get()).data()!,
-      ) as T,
+      ifEvent: () async =>
+          Event.fromJson(await _getOrThrow(FS.events(_db))) as T,
+      ifActualContext: () async =>
+          ActualContext.fromJson(await _getOrThrow(FS.actualContexts(_db)))
+              as T,
     );
     final endTime = DateTime.now();
     final collection = switch (T) {
@@ -177,7 +183,8 @@ class FirestoreDBInterface
       ifContextRequirement: () =>
           newDoc(FS.contextRequirements(_db)).set(object.toJson()),
       ifEvent: () => newDoc(FS.events(_db)).set(object.toJson()),
-      ifActualContext: () => newDoc(FS.actualContexts(_db)).set(object.toJson()),
+      ifActualContext: () =>
+          newDoc(FS.actualContexts(_db)).set(object.toJson()),
     );
 
     return docId;

@@ -74,12 +74,14 @@ class InfoPopupController extends Notifier<InfoPopupState> {
   void openViewMode({
     required String itemId,
     required Rect anchorScreenRect,
+    required ObjectType objectType,
   }) {
     state = InfoPopupState(
       itemId: itemId,
       isOpen: true,
       mode: InfoPopupMode.view,
       anchorScreenRect: anchorScreenRect,
+      objectType: objectType,
     );
   }
 
