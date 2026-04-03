@@ -114,6 +114,7 @@ class CanvasItem {
   final String itemType; // 'node' | 'widget'
   final Rect worldRect;
   final String? objectId; // Firestore doc id (for nodes)
+  final String? objectType; // for nodes
   final Map<String, dynamic>? config;
   final CanvasItemSnapState snap;
 
@@ -122,6 +123,7 @@ class CanvasItem {
     required this.itemType,
     required this.worldRect,
     this.objectId,
+    this.objectType,
     this.config,
     this.snap = const CanvasItemSnapState(),
   });
@@ -145,6 +147,7 @@ class CanvasItem {
         (worldRectJson['h'] as num).toDouble(),
       ),
       objectId: json['objectId'] as String?,
+      objectType: json['objectType'] as String?,
       config: json['config'] as Map<String, dynamic>?,
       snap: json['snap'] != null
           ? CanvasItemSnapState.fromJson(json['snap'] as Map<String, Object?>)
@@ -162,6 +165,7 @@ class CanvasItem {
         'h': worldRect.height,
       },
       if (objectId != null) 'objectId': objectId,
+      if (objectType != null) 'objectType': objectType,
       if (config != null) 'config': config,
       'snap': snap.toJson(),
     };
@@ -379,6 +383,7 @@ abstract class CanvasController extends ChangeNotifier {
         itemType: item.itemType,
         worldRect: newWorldRect,
         objectId: item.objectId,
+        objectType: item.objectType,
         config: item.config,
         snap: snap ?? item.snap,
       );
@@ -632,6 +637,15 @@ class CalendarCanvasController extends CanvasController {
     // Snap increment is 15 minutes.
     const snapIncrement = 15.0;
     return (worldX / snapIncrement).round() * snapIncrement;
+  }
+
+  bool shouldSnap(CanvasItem item) {
+    if (item.itemType != 'node') return false;
+    final type = item.objectType;
+    return type == 'deliverable' ||
+        type == 'session' ||
+        type == 'contextRequirement' ||
+        type == 'event';
   }
 }
 

@@ -142,12 +142,14 @@ class _CalendarCanvasViewState extends ConsumerState<CalendarCanvasView> {
           bool startSnapped = item.snap.startSnapped;
           bool endSnapped = item.snap.endSnapped;
 
-          // If either end has been snapped once, auto-snap unless Cmd is held
-          if (startSnapped || endSnapped) {
-            shouldSnap = !isCmdPressed;
-          } else {
-            // Default: freehand, Cmd enables snap
-            shouldSnap = isCmdPressed;
+          if (widget.controller.shouldSnap(item)) {
+            // If either end has been snapped once, auto-snap unless Cmd is held
+            if (startSnapped || endSnapped) {
+              shouldSnap = !isCmdPressed;
+            } else {
+              // Default: freehand, Cmd enables snap
+              shouldSnap = isCmdPressed;
+            }
           }
 
           if (shouldSnap) {
