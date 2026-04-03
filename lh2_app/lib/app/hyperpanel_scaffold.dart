@@ -23,7 +23,7 @@ class HyperpanelScaffold extends ConsumerWidget {
     final activeTabId = workspaceState.activeTabId;
     final tabs =
         workspaceState.tabs.map((t) => (t.tabId, t.tab.title)).toList();
-    final hovered = ref.watch(ws.tabBarHoveredProvider);
+    final hovered = ref.watch(tabBarHoveredProvider);
 
     void showCreateTabMenu() {
       final RenderBox? overlay =
@@ -96,9 +96,9 @@ class HyperpanelScaffold extends ConsumerWidget {
           /// Hover-reveal tab bar (fixed height, no content shift).
           MouseRegion(
             onEnter: (_) =>
-                ref.read(ws.tabBarHoveredProvider.notifier).state = true,
+                ref.read(tabBarHoveredProvider.notifier).state = true,
             onExit: (_) =>
-                ref.read(ws.tabBarHoveredProvider.notifier).state = false,
+                ref.read(tabBarHoveredProvider.notifier).state = false,
             child: Container(
               height: 40.0,
               color: LH2Colors.panel,
