@@ -18,7 +18,7 @@ class CrosshairOverlay extends ConsumerWidget {
       return const SizedBox.shrink();
     }
 
-    final hoveredItemId = crosshairState.hoveredItemId;
+    final hoveredItemId = crosshairState.hoveredItemId ?? crosshairState.lastHoveredItemId;
     final hoveredItem = canvasController?.items[hoveredItemId];
 
     return Positioned(

@@ -363,7 +363,7 @@ abstract class CanvasController extends ChangeNotifier {
   /// Pan the viewport by a delta in screen coordinates
   void panBy(Offset deltaScreen) {
     final deltaWorld = deltaScreen / viewport.zoom;
-    _updateViewport(viewport.copyWith(pan: viewport.pan - deltaWorld));
+    _updateViewport(viewport.copyWith(pan: viewport.pan + deltaWorld));
   }
 
   /// Zoom the viewport at a focal point in screen coordinates
@@ -376,7 +376,7 @@ abstract class CanvasController extends ChangeNotifier {
     // - Zooming out stops exactly when nodes reach the min allowed *pixel* size
     // This keeps node bounds and port positions aligned, because nodes scale
     // with zoom (see BaseNodeWidget).
-    const minNodeWidthPx = 150.0;
+    const minNodeWidthPx = 120.0;
     const minNodeHeightPx = 60.0;
     // Allow deeper zoom-in, while still preventing runaway scaling.
     const maxNodeWidthPx = 200000.0;
