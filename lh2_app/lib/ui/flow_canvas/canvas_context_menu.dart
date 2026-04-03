@@ -610,11 +610,15 @@ class _CanvasContextMenuState extends ConsumerState<CanvasContextMenu> {
     try {
       final canvasAddItemOp = ref.read(canvasAddItemOpProvider);
 
+      final size = template.renderSpec['size'] as Map<String, dynamic>? ?? {};
+      final width = (size['width'] as num?)?.toDouble() ?? 120.0;
+      final height = (size['height'] as num?)?.toDouble() ?? 80.0;
+
       final worldRect = {
-        'x': widget.worldPosition.dx - 60,
-        'y': widget.worldPosition.dy - 40,
-        'w': 120,
-        'h': 80,
+        'x': widget.worldPosition.dx - width / 2,
+        'y': widget.worldPosition.dy - height / 2,
+        'w': width,
+        'h': height,
       };
 
       final input = CanvasAddItemInput(

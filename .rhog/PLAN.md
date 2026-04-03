@@ -897,6 +897,8 @@ Add tests:
 
 ###### Task 3.1.2-1: Query board (fixed width, resizable height, rename title, edit query) [L4]
 
+*DONE*
+
 ```text
 Prompt (L4):
 

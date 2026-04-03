@@ -230,3 +230,26 @@ final workspaceIdProvider = FutureProvider<String>((ref) async {
   final user = await ref.watch(currentUserProvider.future);
   return user.uid;
 });
+
+/// General object provider that fetches an object by its type and ID.
+final objectProvider = FutureProvider.family<LH2Object?, (ObjectType, String)>((ref, params) async {
+  final (type, id) = params;
+  switch (type) {
+    case ObjectType.project:
+      return ref.watch(projectCacheProvider).get(id);
+    case ObjectType.task:
+      return ref.watch(taskCacheProvider).get(id);
+    case ObjectType.deliverable:
+      return ref.watch(deliverableCacheProvider).get(id);
+    case ObjectType.session:
+      return ref.watch(sessionCacheProvider).get(id);
+    case ObjectType.event:
+      return ref.watch(eventCacheProvider).get(id);
+    case ObjectType.contextRequirement:
+      return ref.watch(contextRequirementCacheProvider).get(id);
+    case ObjectType.actualContext:
+      return ref.watch(actualContextCacheProvider).get(id);
+    case ObjectType.projectGroup:
+      return ref.watch(projectGroupCacheProvider).get(id);
+  }
+});

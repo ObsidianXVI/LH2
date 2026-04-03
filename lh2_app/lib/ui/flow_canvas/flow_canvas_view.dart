@@ -23,6 +23,7 @@ import 'package:lh2_app/ui/flow_canvas/canvas_provider.dart';
 import 'package:lh2_app/ui/flow_canvas/link_painter.dart';
 import 'package:lh2_app/domain/models/node_template_ports.dart';
 import 'package:lh2_app/ui/flow_canvas/query_board.dart';
+import 'package:lh2_app/ui/flow_canvas/nodes/node_canvas_item.dart';
 
 /// Flow Canvas widget that renders an infinite scroll canvas with grid background,
 /// pan/zoom interactions, and draggable items.
@@ -278,47 +279,54 @@ class _FlowCanvasViewState extends ConsumerState<FlowCanvasView> {
                       ? _handleLinkingClick(itemId)
                       : _handleItemTap(itemId),
                   behavior: HitTestBehavior.opaque,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: LH2Colors.panel,
-                      border: Border.all(
-                        color: isHighlighted
-                            ? LH2Colors.selectionBlue
-                            : (isSelected
-                                ? LH2Colors.selectionBlue
-                                : LH2Colors.border),
-                        width: isHighlighted ? 3.0 : (isSelected ? 2.0 : 1.0),
-                      ),
-                      borderRadius: BorderRadius.circular(4),
-                      boxShadow: isHighlighted
-                          ? [
-                              BoxShadow(
-                                color:
-                                    LH2Colors.selectionBlue.withOpacity(0.12),
-                                blurRadius: 8.0,
-                              )
-                            ]
-                          : null,
-                    ),
-                    child: Center(
-                      child: item.itemType == 'text'
-                          ? (isEditing
-                              ? _buildTextEditor(item)
-                              : _buildTextDisplay(item))
-                          : item.itemType == 'queryBoard'
-                              ? QueryBoardWidget(
-                                  itemId: itemId,
-                                  controller: widget.controller,
-                                )
-                              : Text(
-                                  item.itemType,
-                                  style: const TextStyle(
-                                    color: LH2Colors.textPrimary,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                    ),
-                  ),
+                  child: item.itemType == 'node'
+                      ? NodeCanvasItem(
+                          itemId: itemId,
+                          item: item,
+                          isSelected: isSelected,
+                          isHighlighted: isHighlighted,
+                        )
+                      : Container(
+                          decoration: BoxDecoration(
+                            color: LH2Colors.panel,
+                            border: Border.all(
+                              color: isHighlighted
+                                  ? LH2Colors.selectionBlue
+                                  : (isSelected
+                                      ? LH2Colors.selectionBlue
+                                      : LH2Colors.border),
+                              width: isHighlighted ? 3.0 : (isSelected ? 2.0 : 1.0),
+                            ),
+                            borderRadius: BorderRadius.circular(4),
+                            boxShadow: isHighlighted
+                                ? [
+                                    BoxShadow(
+                                      color:
+                                          LH2Colors.selectionBlue.withOpacity(0.12),
+                                      blurRadius: 8.0,
+                                    )
+                                  ]
+                                : null,
+                          ),
+                          child: Center(
+                            child: item.itemType == 'text'
+                                ? (isEditing
+                                    ? _buildTextEditor(item)
+                                    : _buildTextDisplay(item))
+                                : item.itemType == 'queryBoard'
+                                    ? QueryBoardWidget(
+                                        itemId: itemId,
+                                        controller: widget.controller,
+                                      )
+                                    : Text(
+                                        item.itemType,
+                                        style: const TextStyle(
+                                          color: LH2Colors.textPrimary,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                          ),
+                        ),
                 ),
                 if (item.itemType == 'node') ...[
                   // Input port (left) - larger invisible hit area

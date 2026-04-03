@@ -7,14 +7,18 @@ class DemoCanvasItems {
     CanvasItem(
       itemId: 'demo-1',
       itemType: 'node',
-      worldRect: const Rect.fromLTWH(100, 100, 120, 80),
+      worldRect: const Rect.fromLTWH(100, 100, 389, 133),
       objectId: 'project-1',
+      objectType: 'project',
+      config: {'templateId': 'project-default'},
     ),
     CanvasItem(
       itemId: 'demo-2',
       itemType: 'node',
-      worldRect: const Rect.fromLTWH(300, 200, 120, 80),
+      worldRect: const Rect.fromLTWH(600, 100, 389, 133),
       objectId: 'task-1',
+      objectType: 'task',
+      config: {'templateId': 'task-default'},
     ),
     CanvasItem(
       itemId: 'demo-3',
