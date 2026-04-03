@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lh2_app/domain/operations/core.dart';
 import 'package:flutter/services.dart';
+import 'responsive.dart';
 
 import 'providers.dart';
 import 'theme.dart';
 import '../ui/theme/tokens.dart';
-import '../domain/notifiers/workspace_controller.dart';
+import '../domain/notifiers/workspace_controller.dart' as ws;
+import '../domain/notifiers/canvas_controller_impl.dart';
 import '../ui/query_overlay.dart';
 
 /// Hyperpanel Scaffold with hover-reveal tab bar (FEATURES.md §1.1.1).
@@ -16,11 +18,12 @@ class HyperpanelScaffold extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final workspaceState = ref.watch(workspaceControllerProvider);
+    final workspaceState = ref.watch(ws.workspaceControllerProvider);
+    final isSmall = LH2Breakpoints.isSmallDesktop(context);
     final activeTabId = workspaceState.activeTabId;
     final tabs =
         workspaceState.tabs.map((t) => (t.tabId, t.tab.title)).toList();
-    final hovered = ref.watch(tabBarHoveredProvider);
+    final hovered = ref.watch(ws.tabBarHoveredProvider);
 
     void showCreateTabMenu() {
       final RenderBox? overlay =
@@ -62,12 +65,12 @@ class HyperpanelScaffold extends ConsumerWidget {
         ],
       ).then((kind) async {
         if (kind != null) {
-          final controller = ref.read(workspaceControllerProvider.notifier);
+          final controller = ref.read(ws.workspaceControllerProvider.notifier);
 
           // Now create the tab
           try {
             await controller.createTab(
-              kind == 'flow' ? CanvasKind.flow : CanvasKind.calendar,
+              kind == 'flow' ? ws.CanvasKind.flow : ws.CanvasKind.calendar,
             );
           } catch (e) {
             if (context.mounted) {
@@ -93,9 +96,9 @@ class HyperpanelScaffold extends ConsumerWidget {
           /// Hover-reveal tab bar (fixed height, no content shift).
           MouseRegion(
             onEnter: (_) =>
-                ref.read(tabBarHoveredProvider.notifier).state = true,
+                ref.read(ws.tabBarHoveredProvider.notifier).state = true,
             onExit: (_) =>
-                ref.read(tabBarHoveredProvider.notifier).state = false,
+                ref.read(ws.tabBarHoveredProvider.notifier).state = false,
             child: Container(
               height: 40.0,
               color: LH2Colors.panel,
@@ -104,7 +107,7 @@ class HyperpanelScaffold extends ConsumerWidget {
                 activeTabId: activeTabId,
                 hovered: hovered,
                 onSelect: (id) => ref
-                    .read(workspaceControllerProvider.notifier)
+                    .read(ws.workspaceControllerProvider.notifier)
                     .setActiveTab(id),
                 onCreateTab: showCreateTabMenu,
               ),
@@ -113,9 +116,23 @@ class HyperpanelScaffold extends ConsumerWidget {
           Expanded(
             child: Row(
               children: [
-                const SizedBox(
-                  width: 320.0,
-                  child: QueryOverlay(),
+                SizedBox(
+                  width: isSmall ? 60.0 : context.queryOverlayWidth,
+                  child: isSmall
+                      ? Container(
+                          color: LH2Colors.panel,
+                          child: Column(
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.search),
+                                onPressed: () {
+                                  // In a real app, this could open a drawer or expand the overlay
+                                },
+                              ),
+                            ],
+                          ),
+                        )
+                      : const QueryOverlay(),
                 ),
                 Expanded(child: child),
               ],
@@ -236,7 +253,7 @@ class _TabButtonState extends ConsumerState<TabButton> {
                 GestureDetector(
                   behavior: HitTestBehavior.opaque,
                   onTap: () {
-                    ref.read(workspaceControllerProvider.notifier).deleteTab(widget.tab.id);
+                    ref.read(ws.workspaceControllerProvider.notifier).deleteTab(widget.tab.id);
                   },
                   child: Padding(
                     padding: const EdgeInsets.only(left: 4.0),
@@ -309,7 +326,7 @@ class _EditableTabLabelState extends ConsumerState<EditableTabLabel> {
     final newTitle = _controller.text.trim();
     if (newTitle.isNotEmpty && newTitle != widget.tab.title) {
       ref
-          .read(workspaceControllerProvider.notifier)
+          .read(ws.workspaceControllerProvider.notifier)
           .renameTab(widget.tab.id, newTitle);
     }
     setState(() {
