@@ -925,6 +925,8 @@ Integration:
 
 ###### Task 3.2.1-1: Node template schema + registry + renderer [L4]
 
+*DONE*
+
 ```text
 Prompt (L4):
 
@@ -952,6 +954,8 @@ Renderer:
 
 ##### 3.2.2–3.2.9: Node widgets (initial set) [L2]
 
+*DONE*
+
 ```text
 Prompt (L2):
 
@@ -976,6 +980,8 @@ Constraints:
 
 ##### Task 4.1-1: Modifier state tracker (Cmd/Ctrl/Shift/Alt) [L3]
 
+*DONE*
+
 ```text
 Prompt (L3):
 
@@ -999,6 +1005,8 @@ Use cases:
 #### 4.2: Keyboard Shortcuts
 
 ##### Task 4.2-1: Shortcuts engine (Appendix E) [L4]
+
+*DONE*
 
 ```text
 Prompt (L4):

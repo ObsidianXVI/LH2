@@ -369,7 +369,58 @@ abstract class CanvasController extends ChangeNotifier {
   /// Zoom the viewport at a focal point in screen coordinates
   void zoomAt({required Offset focalScreen, required double scaleDelta}) {
     final focalWorld = screenToWorld(focalScreen);
-    final newZoom = (viewport.zoom * scaleDelta).clamp(0.1, 10.0);
+
+    // --- Synchronized clamping (viewport zoom <-> node pixel size) ---
+    // We clamp zoom based on current node world sizes so that:
+    // - Zooming in stops exactly when nodes reach the max allowed *pixel* size
+    // - Zooming out stops exactly when nodes reach the min allowed *pixel* size
+    // This keeps node bounds and port positions aligned, because nodes scale
+    // with zoom (see BaseNodeWidget).
+    const minNodeWidthPx = 150.0;
+    const minNodeHeightPx = 60.0;
+    // Allow deeper zoom-in, while still preventing runaway scaling.
+    const maxNodeWidthPx = 200000.0;
+    const maxNodeHeightPx = 200000.0;
+
+    // If there are no nodes yet, fall back to a conservative clamp.
+    final nodeItems = _items.values.where((i) => i.itemType == 'node');
+    final oldZoom = viewport.zoom;
+    double proposedZoom = (oldZoom * scaleDelta).clamp(0.01, 1000.0);
+
+    if (nodeItems.isNotEmpty) {
+      // For min zoom (zooming out): smallest world size hits min pixel size first.
+      double minZoom = 0.0;
+      for (final item in nodeItems) {
+        final w = item.worldRect.width;
+        final h = item.worldRect.height;
+        if (w > 0) minZoom = Math.max(minZoom, minNodeWidthPx / w);
+        if (h > 0) minZoom = Math.max(minZoom, minNodeHeightPx / h);
+      }
+
+      // For max zoom (zooming in): largest world size hits max pixel size first.
+      double maxZoom = double.infinity;
+      for (final item in nodeItems) {
+        final w = item.worldRect.width;
+        final h = item.worldRect.height;
+        if (w > 0) maxZoom = Math.min(maxZoom, maxNodeWidthPx / w);
+        if (h > 0) maxZoom = Math.min(maxZoom, maxNodeHeightPx / h);
+      }
+
+      // Guard against pathological values.
+      if (maxZoom.isFinite) {
+        // Ensure minZoom doesn't exceed maxZoom.
+        if (minZoom > maxZoom) {
+          // If they overlap, pin both to the closest feasible value.
+          minZoom = maxZoom;
+        }
+        proposedZoom = proposedZoom.clamp(minZoom, maxZoom);
+      } else {
+        proposedZoom = proposedZoom.clamp(minZoom, 1000.0);
+      }
+    }
+
+    final newZoom = proposedZoom;
+    if (newZoom == oldZoom) return;
 
     // Calculate new pan to keep the focal point stationary
     final newPan = focalWorld -

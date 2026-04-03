@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as Math;
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
@@ -21,6 +22,7 @@ import 'package:lh2_app/ui/flow_canvas/grid_background_painter.dart';
 import 'package:lh2_app/ui/flow_canvas/demo_items.dart';
 import 'package:lh2_app/ui/flow_canvas/canvas_provider.dart';
 import 'package:lh2_app/ui/flow_canvas/link_painter.dart';
+import 'package:lh2_app/app/modifier_state.dart';
 import 'package:lh2_app/domain/models/node_template_ports.dart';
 import 'package:lh2_app/ui/flow_canvas/query_board.dart';
 import 'package:lh2_app/ui/flow_canvas/nodes/node_canvas_item.dart';
@@ -126,7 +128,19 @@ class _FlowCanvasViewState extends ConsumerState<FlowCanvasView> {
           return Listener(
             onPointerSignal: (PointerSignalEvent event) {
               if (event is PointerScrollEvent) {
-                widget.controller.panBy(event.scrollDelta);
+                final modifierState = ref.read(modifierStateProvider);
+                if (modifierState.cmd) {
+                  // Zoom on Cmd + Scroll
+                  // Sensitivity constant for zoom
+                  const k = 0.01;
+                  final scaleDelta = Math.exp(-event.scrollDelta.dy * k);
+                  widget.controller.zoomAt(
+                    focalScreen: event.localPosition,
+                    scaleDelta: scaleDelta,
+                  );
+                } else {
+                  widget.controller.panBy(event.scrollDelta);
+                }
                 setState(() {});
               }
             },
@@ -328,21 +342,7 @@ class _FlowCanvasViewState extends ConsumerState<FlowCanvasView> {
                           ),
                         ),
                 ),
-                if (item.itemType == 'node') ...[
-                  // Input port (left) - larger invisible hit area
-                  Positioned(
-                    left: -24,
-                    top: screenRect.height / 2 - 24,
-                    child: _buildPort(itemId, 'port-in', Colors.red, isLinking),
-                  ),
-                  // Output port (right) - larger invisible hit area and clearer cursor
-                  Positioned(
-                    right: -24,
-                    top: screenRect.height / 2 - 24,
-                    child:
-                        _buildPort(itemId, 'port-out', Colors.green, isLinking),
-                  ),
-                ],
+                if (item.itemType == 'node') ..._buildItemPorts(itemId, item, screenRect, isLinking),
               ],
             ),
           )),
@@ -362,9 +362,10 @@ class _FlowCanvasViewState extends ConsumerState<FlowCanvasView> {
           // Keep onTap as a fallback for non-pointer platforms
           onTap: () => _handlePortTap(itemId, portId),
           behavior: HitTestBehavior.translucent,
-          child: SizedBox(
+          child: Container(
             width: 28,
             height: 28,
+            color: Colors.transparent, // Ensure it's hit-testable
             child: Center(
               child: Container(
                 width: 16,
@@ -979,6 +980,45 @@ class _FlowCanvasViewState extends ConsumerState<FlowCanvasView> {
     final bottomRight = _worldToScreen(worldRect.bottomRight);
 
     return Rect.fromPoints(topLeft, bottomRight);
+  }
+
+  List<Widget> _buildItemPorts(String itemId, CanvasItem item, Rect screenRect, bool isLinking) {
+    // For now we use hardcoded ports for 'node' type items.
+    // In a real app, these would come from the NodeTemplate.
+    final ports = <Widget>[];
+    const hitAreaSize = 28.0;
+    const halfHitArea = hitAreaSize / 2;
+
+    // Input port (left) - centered vertically
+    ports.add(
+      Positioned(
+        left: -halfHitArea,
+        top: (screenRect.height / 2) - halfHitArea,
+        child: _buildPort(itemId, 'port-in', Colors.red, isLinking),
+      ),
+    );
+
+    // Output port (right) - centered vertically
+    ports.add(
+      Positioned(
+        right: -halfHitArea,
+        top: (screenRect.height / 2) - halfHitArea,
+        child: _buildPort(itemId, 'port-out', Colors.green, isLinking),
+      ),
+    );
+
+    // Conditional port (bottom) - for contextRequirement nodes
+    if (item.objectType == 'contextRequirement') {
+      ports.add(
+        Positioned(
+          left: (screenRect.width / 2) - halfHitArea,
+          bottom: -halfHitArea,
+          child: _buildPort(itemId, 'port-conditional', Colors.orange, isLinking),
+        ),
+      );
+    }
+
+    return ports;
   }
 
   Offset _worldToScreen(Offset worldPos) {

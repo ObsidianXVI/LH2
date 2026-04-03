@@ -33,9 +33,12 @@ class BaseNodeWidget extends StatelessWidget {
     var borderColor = _parseColor(style['borderColor']) ?? LH2Colors.border;
     final textColor = _parseColor(style['textColor']) ?? LH2Colors.textPrimary;
 
-    final size = spec['size'] as Map<String, dynamic>? ?? {};
-    final width = (size['width'] as num?)?.toDouble();
-    final height = (size['height'] as num?)?.toDouble();
+    // IMPORTANT:
+    // Do not hard-code a fixed width/height here.
+    // FlowCanvas positions the node with a tight SizedBox/Positioned based on
+    // the worldRect * zoom (screenRect). If we set a fixed template size here,
+    // the node won't scale with zoom and ports (which are positioned relative
+    // to the parent bounds) will drift/misalign.
 
     if (item.disabledByScenario) {
       backgroundColor = backgroundColor.withOpacity(0.5);
@@ -49,42 +52,42 @@ class BaseNodeWidget extends StatelessWidget {
 
     final borderWidth = isHighlighted ? 3.0 : (isSelected ? 2.0 : 1.0);
 
-    return Container(
-      width: width,
-      height: height,
-      foregroundDecoration: item.disabledByScenario
-          ? BoxDecoration(
-              color: Colors.grey.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(10),
-            )
-          : null,
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        border: Border.all(
-          color: item.disabledByScenario ? Colors.grey : borderColor,
-          width: borderWidth,
-        ),
-        borderRadius: BorderRadius.circular(10), // Figma shows 10px radius
-        boxShadow: isHighlighted
-            ? [
-                BoxShadow(
-                  color: LH2Colors.selectionBlue.withOpacity(0.12),
-                  blurRadius: 8.0,
-                )
-              ]
+    return SizedBox.expand(
+      child: Container(
+        foregroundDecoration: item.disabledByScenario
+            ? BoxDecoration(
+                color: Colors.grey.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(10),
+              )
             : null,
-      ),
-      child: IgnorePointer(
-        ignoring: item.disabledByScenario,
-        child: Opacity(
-          opacity: item.disabledByScenario ? 0.5 : 1.0,
-          child: DefaultTextStyle(
-            style: TextStyle(
-              color: textColor,
-              fontFamily: 'Menlo',
-              fontSize: 12,
+        decoration: BoxDecoration(
+          color: backgroundColor,
+          border: Border.all(
+            color: item.disabledByScenario ? Colors.grey : borderColor,
+            width: borderWidth,
+          ),
+          borderRadius: BorderRadius.circular(10), // Figma shows 10px radius
+          boxShadow: isHighlighted
+              ? [
+                  BoxShadow(
+                    color: LH2Colors.selectionBlue.withOpacity(0.12),
+                    blurRadius: 8.0,
+                  )
+                ]
+              : null,
+        ),
+        child: IgnorePointer(
+          ignoring: item.disabledByScenario,
+          child: Opacity(
+            opacity: item.disabledByScenario ? 0.5 : 1.0,
+            child: DefaultTextStyle(
+              style: TextStyle(
+                color: textColor,
+                fontFamily: 'Menlo',
+                fontSize: 12,
+              ),
+              child: child,
             ),
-            child: child,
           ),
         ),
       ),
@@ -241,8 +244,10 @@ class ProjectNodeRenderer extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildInfoRow('Deliverables', project.deliverablesIds.length.toString()),
-                  _buildInfoRow('Tasks', project.nonDeliverableTasksIds.length.toString()),
+                  _buildInfoRow('Deliverables',
+                      project.deliverablesIds.length.toString()),
+                  _buildInfoRow('Tasks',
+                      project.nonDeliverableTasksIds.length.toString()),
                   const SizedBox(height: 8),
                   _buildProgressIndicator(),
                 ],
@@ -471,7 +476,8 @@ class DeliverableNodeRenderer extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildInfoRow('Tasks', deliverable.tasksIds.length.toString()),
+                  _buildInfoRow(
+                      'Tasks', deliverable.tasksIds.length.toString()),
                   _buildInfoRow('Deadline', _formatDeadline()),
                 ],
               ),
@@ -556,8 +562,10 @@ class SessionNodeRenderer extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildInfoRow('Scheduled', _formatScheduledTime()),
-                  _buildInfoRow('Focus Level', '${session.contextRequirement.focusLevel}'),
-                  _buildInfoRow('Duration', '${session.contextRequirement.contiguousMinutesNeeded} min'),
+                  _buildInfoRow('Focus Level',
+                      '${session.contextRequirement.focusLevel}'),
+                  _buildInfoRow('Duration',
+                      '${session.contextRequirement.contiguousMinutesNeeded} min'),
                 ],
               ),
             ),
@@ -695,8 +703,10 @@ class ContextRequirementNodeRenderer extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildInfoRow('Focus Level', '${contextRequirement.focusLevel}'),
-                  _buildInfoRow('Duration Needed', '${contextRequirement.contiguousMinutesNeeded} min'),
+                  _buildInfoRow(
+                      'Focus Level', '${contextRequirement.focusLevel}'),
+                  _buildInfoRow('Duration Needed',
+                      '${contextRequirement.contiguousMinutesNeeded} min'),
                   const SizedBox(height: 8),
                   _buildResourceTags(),
                 ],
@@ -729,7 +739,8 @@ class ContextRequirementNodeRenderer extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Resource Tags:', style: TextStyle(color: LH2Colors.textSecondary)),
+        const Text('Resource Tags:',
+            style: TextStyle(color: LH2Colors.textSecondary)),
         const SizedBox(height: 4),
         Wrap(
           spacing: 4,
@@ -740,7 +751,8 @@ class ContextRequirementNodeRenderer extends StatelessWidget {
               decoration: BoxDecoration(
                 color: LH2Colors.accentBlue.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(4),
-                border: Border.all(color: LH2Colors.accentBlue.withOpacity(0.3)),
+                border:
+                    Border.all(color: LH2Colors.accentBlue.withOpacity(0.3)),
               ),
               child: Text('${entry.key}: ${entry.value}'),
             );
@@ -838,7 +850,8 @@ class ActualContextNodeRenderer extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Resource Tags:', style: TextStyle(color: LH2Colors.textSecondary)),
+        const Text('Resource Tags:',
+            style: TextStyle(color: LH2Colors.textSecondary)),
         const SizedBox(height: 4),
         Wrap(
           spacing: 4,
@@ -849,7 +862,8 @@ class ActualContextNodeRenderer extends StatelessWidget {
               decoration: BoxDecoration(
                 color: LH2Colors.successGreen.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(4),
-                border: Border.all(color: LH2Colors.successGreen.withOpacity(0.3)),
+                border:
+                    Border.all(color: LH2Colors.successGreen.withOpacity(0.3)),
               ),
               child: Text('${entry.key}: ${entry.value}'),
             );
