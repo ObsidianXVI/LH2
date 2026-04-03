@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
@@ -44,11 +45,32 @@ class _FlowCanvasViewState extends ConsumerState<FlowCanvasView> {
   TextEditingController? _textController;
   Timer? _textPersistenceTimer;
   final FocusNode _focusNode = FocusNode();
+  final FocusNode _canvasFocusNode = FocusNode(debugLabel: 'flow_canvas');
 
   @override
   void initState() {
     super.initState();
     widget.controller.addListener(_onControllerChanged);
+
+    // Avoid autofocus-based focus traversal on web before layout is complete.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _canvasFocusNode.requestFocus();
+      }
+    });
+  }
+
+  @override
+  void didUpdateWidget(covariant FlowCanvasView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // If the controller instance changed, update listeners so we reflect
+    // updates from the new controller and stop listening to the old one.
+    if (oldWidget.controller != widget.controller) {
+      oldWidget.controller.removeListener(_onControllerChanged);
+      widget.controller.addListener(_onControllerChanged);
+      // Trigger a rebuild to pick up new controller state immediately.
+      setState(() {});
+    }
   }
 
   @override
@@ -57,6 +79,7 @@ class _FlowCanvasViewState extends ConsumerState<FlowCanvasView> {
     _removeContextMenu();
     _textController?.dispose();
     _focusNode.dispose();
+    _canvasFocusNode.dispose();
     _textPersistenceTimer?.cancel();
     super.dispose();
   }
@@ -70,7 +93,9 @@ class _FlowCanvasViewState extends ConsumerState<FlowCanvasView> {
   @override
   Widget build(BuildContext context) {
     return Focus(
-      autofocus: true,
+      focusNode: _canvasFocusNode,
+      autofocus: false,
+      skipTraversal: true,
       onKeyEvent: (FocusNode node, KeyEvent event) {
         final marqueeNotifier =
             ref.read(marqueeSelectionControllerProvider.notifier);
@@ -91,13 +116,23 @@ class _FlowCanvasViewState extends ConsumerState<FlowCanvasView> {
           // Update viewport size in controller
           final viewportSize =
               Size(constraints.maxWidth, constraints.maxHeight);
-          _updateViewportSize(viewportSize);
+          // Avoid setState/notifyListeners during build by deferring to next frame.
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) _updateViewportSize(viewportSize);
+          });
 
           return Listener(
             onPointerSignal: (PointerSignalEvent event) {
               if (event is PointerScrollEvent) {
                 widget.controller.panBy(event.scrollDelta);
                 setState(() {});
+              }
+            },
+            onPointerMove: (event) {
+              // Track cursor while linking so the pending link can render.
+              if (widget.controller.pendingFromItemId != null) {
+                widget.controller
+                    .updatePendingPointerScreen(event.localPosition);
               }
             },
             onPointerPanZoomUpdate: (PointerPanZoomUpdateEvent event) {
@@ -141,10 +176,14 @@ class _FlowCanvasViewState extends ConsumerState<FlowCanvasView> {
                     // Canvas items layer
                     _buildItemsLayer(),
 
-                    // Links layer (overlay)
-                    CustomPaint(
-                      painter: LinkPainter(controller: widget.controller),
-                      size: viewportSize,
+                    // Links layer (overlay). Use IgnorePointer so the painter
+                    // does not block pointer events to the item widgets below.
+                    IgnorePointer(
+                      ignoring: true,
+                      child: CustomPaint(
+                        painter: LinkPainter(controller: widget.controller),
+                        size: viewportSize,
+                      ),
                     ),
 
                     // Selection overlay
@@ -200,109 +239,266 @@ class _FlowCanvasViewState extends ConsumerState<FlowCanvasView> {
     final isSelected = widget.controller.selection.contains(itemId);
     final isEditing = _editingItemId == itemId && item.itemType == 'text';
     final isLinking = widget.controller.pendingFromItemId != null;
-    final isPotentialTarget = isLinking && widget.controller.isValidLinkTarget(itemId);
-    
+    final isPotentialTarget = isLinking && _isValidLinkTargetWithPorts(itemId);
+
+    // Highlight when linking and this item is a valid hover target
+    final isHighlighted =
+        isLinking && isPotentialTarget && _hoveredItemId == itemId;
+
     // Grey out non-valid targets if linking
-    final opacity = (isLinking && !isPotentialTarget && widget.controller.pendingFromItemId != itemId) ? 0.3 : 1.0;
+    final opacity = (isLinking &&
+            !isPotentialTarget &&
+            widget.controller.pendingFromItemId != itemId)
+        ? 0.3
+        : 1.0;
 
     return Positioned(
       left: screenRect.left,
       top: screenRect.top,
       width: screenRect.width,
       height: screenRect.height,
-      child: Opacity(
-        opacity: opacity,
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            GestureDetector(
-              onPanStart: (details) => _handleItemDragStart(itemId, details),
-              onPanUpdate: (details) => _handleItemDragUpdate(itemId, details),
-              onTap: () => isLinking ? _handleLinkingClick(itemId) : _handleItemTap(itemId),
-              behavior: HitTestBehavior.opaque,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: LH2Colors.panel,
-                  border: Border.all(
-                    color: isSelected ? LH2Colors.selectionBlue : LH2Colors.border,
-                    width: isSelected ? 2.0 : 1.0,
+      child: MouseRegion(
+          cursor: isLinking
+              ? (isPotentialTarget
+                  ? SystemMouseCursors.click
+                  : SystemMouseCursors.forbidden)
+              : SystemMouseCursors.basic,
+          child: Opacity(
+            opacity: opacity,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                GestureDetector(
+                  onPanStart: (details) =>
+                      _handleItemDragStart(itemId, details),
+                  onPanUpdate: (details) =>
+                      _handleItemDragUpdate(itemId, details),
+                  onTap: () => isLinking
+                      ? _handleLinkingClick(itemId)
+                      : _handleItemTap(itemId),
+                  behavior: HitTestBehavior.opaque,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: LH2Colors.panel,
+                      border: Border.all(
+                        color: isHighlighted
+                            ? LH2Colors.selectionBlue
+                            : (isSelected
+                                ? LH2Colors.selectionBlue
+                                : LH2Colors.border),
+                        width: isHighlighted ? 3.0 : (isSelected ? 2.0 : 1.0),
+                      ),
+                      borderRadius: BorderRadius.circular(4),
+                      boxShadow: isHighlighted
+                          ? [
+                              BoxShadow(
+                                color:
+                                    LH2Colors.selectionBlue.withOpacity(0.12),
+                                blurRadius: 8.0,
+                              )
+                            ]
+                          : null,
+                    ),
+                    child: Center(
+                      child: item.itemType == 'text'
+                          ? (isEditing
+                              ? _buildTextEditor(item)
+                              : _buildTextDisplay(item))
+                          : Text(
+                              item.itemType,
+                              style: const TextStyle(
+                                color: LH2Colors.textPrimary,
+                                fontSize: 12,
+                              ),
+                            ),
+                    ),
                   ),
-                  borderRadius: BorderRadius.circular(4),
                 ),
-                child: Center(
-                  child: item.itemType == 'text'
-                      ? (isEditing ? _buildTextEditor(item) : _buildTextDisplay(item))
-                      : Text(
-                          item.itemType,
-                          style: const TextStyle(
-                            color: LH2Colors.textPrimary,
-                            fontSize: 12,
-                          ),
-                        ),
-                ),
-              ),
+                if (item.itemType == 'node') ...[
+                  // Input port (left) - larger invisible hit area
+                  Positioned(
+                    left: -24,
+                    top: screenRect.height / 2 - 24,
+                    child: _buildPort(itemId, 'port-in', Colors.red, isLinking),
+                  ),
+                  // Output port (right) - larger invisible hit area and clearer cursor
+                  Positioned(
+                    right: -24,
+                    top: screenRect.height / 2 - 24,
+                    child:
+                        _buildPort(itemId, 'port-out', Colors.green, isLinking),
+                  ),
+                ],
+              ],
             ),
-            if (item.itemType == 'node') ...[
-              // Input port (left)
-              Positioned(
-                left: -6,
-                top: screenRect.height / 2 - 6,
-                child: _buildPort(itemId, 'port-in', Colors.red, isLinking),
-              ),
-              // Output port (right)
-              Positioned(
-                right: -6,
-                top: screenRect.height / 2 - 6,
-                child: _buildPort(itemId, 'port-out', Colors.green, isLinking),
-              ),
-            ],
-          ],
-        ),
-      ),
+          )),
     );
   }
 
   Widget _buildPort(String itemId, String portId, Color color, bool isLinking) {
-    return GestureDetector(
-      onTap: () => _handlePortTap(itemId, portId),
-      behavior: HitTestBehavior.opaque,
-      child: Container(
-        width: 12,
-        height: 12,
-        decoration: BoxDecoration(
-          color: color,
-          shape: BoxShape.circle,
-          border: Border.all(color: Colors.white, width: 2),
+    // Make the interactive hit area larger than the visible circle so users
+    // can reliably click ports on desktop (Chrome) and touch devices.
+    final bool isOutput = portId.contains('out');
+    return MouseRegion(
+      cursor: isOutput ? SystemMouseCursors.click : SystemMouseCursors.basic,
+      child: Listener(
+        behavior: HitTestBehavior.translucent,
+        onPointerDown: (_) => _handlePortTap(itemId, portId),
+        child: GestureDetector(
+          // Keep onTap as a fallback for non-pointer platforms
+          onTap: () => _handlePortTap(itemId, portId),
+          behavior: HitTestBehavior.translucent,
+          child: SizedBox(
+            width: 28,
+            height: 28,
+            child: Center(
+              child: Container(
+                width: 16,
+                height: 16,
+                decoration: BoxDecoration(
+                  color: color,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 2),
+                ),
+              ),
+            ),
+          ),
         ),
       ),
     );
   }
 
   void _handlePortTap(String itemId, String portId) {
+    // If this is an output port, start linking mode.
     if (portId.contains('out')) {
       widget.controller.startLinking(itemId, portId);
+      return;
     }
+
+    // If this is an input port and we're currently linking, complete the
+    // connection directly from the port tap. This is necessary because the
+    // port's GestureDetector consumes the tap and the parent item onTap
+    // won't be invoked when tapping the small port circle.
+    final pendingFrom = widget.controller.pendingFromItemId;
+    final pendingFromPort = widget.controller.pendingFromPortId;
+    if (pendingFrom == null || pendingFromPort == null) {
+      return; // nothing to do
+    }
+
+    // Prevent self-linking
+    if (pendingFrom == itemId) {
+      widget.controller.cancelLinking();
+      return;
+    }
+
+    // Validate port compatibility using NodeTemplatePorts
+    final fromItem = widget.controller.items[pendingFrom];
+    final toItem = widget.controller.items[itemId];
+    if (fromItem == null || toItem == null) {
+      widget.controller.cancelLinking();
+      return;
+    }
+
+    final fromPorts =
+        NodeTemplatePorts.getPortsForObjectType(_inferObjectType(fromItem));
+    final toPorts =
+        NodeTemplatePorts.getPortsForObjectType(_inferObjectType(toItem));
+
+    final fromPortSpec =
+        fromPorts.where((p) => p.portId == pendingFromPort).firstOrNull;
+    final toPortSpec = toPorts.where((p) => p.portId == portId).firstOrNull;
+
+    if (fromPortSpec != null &&
+        toPortSpec != null &&
+        NodeTemplatePorts.arePortsCompatible(fromPortSpec, toPortSpec)) {
+      _addLink(pendingFrom, pendingFromPort, itemId, portId);
+    }
+
+    widget.controller.cancelLinking();
   }
 
   void _handleLinkingClick(String targetItemId) {
     final fromItemId = widget.controller.pendingFromItemId;
     final fromPortId = widget.controller.pendingFromPortId;
-    
-    if (fromItemId != null && fromPortId != null && fromItemId != targetItemId) {
+
+    if (fromItemId != null &&
+        fromPortId != null &&
+        fromItemId != targetItemId &&
+        _isValidLinkTargetWithPorts(targetItemId)) {
+      // For now, we connect to the default input port.
+      // If templates define multiple input ports we can add a second step.
       _addLink(fromItemId, fromPortId, targetItemId, 'port-in');
     }
     widget.controller.cancelLinking();
   }
 
-  Future<void> _addLink(String fromId, String fromPort, String toId, String toPort) async {
+  /// Port-aware validation used for greying out invalid destinations.
+  ///
+  /// Currently uses demo templates mapping (via NodeTemplatePorts.getPortsForObjectType)
+  /// and/or template renderSpec if available.
+  bool _isValidLinkTargetWithPorts(String targetItemId) {
+    final fromItemId = widget.controller.pendingFromItemId;
+    final fromPortId = widget.controller.pendingFromPortId;
+    if (fromItemId == null || fromPortId == null) return false;
+    if (fromItemId == targetItemId) return false;
+
+    final fromItem = widget.controller.items[fromItemId];
+    final toItem = widget.controller.items[targetItemId];
+    if (fromItem == null || toItem == null) return false;
+    if (toItem.itemType != 'node') return false;
+
+    // Determine ports for from/to item. For now we derive from objectId prefix,
+    // and fall back to default ports.
+    final fromPorts =
+        NodeTemplatePorts.getPortsForObjectType(_inferObjectType(fromItem));
+    final toPorts =
+        NodeTemplatePorts.getPortsForObjectType(_inferObjectType(toItem));
+
+    final fromPort = fromPorts.where((p) => p.portId == fromPortId).firstOrNull;
+    // Default to 'port-in' for destination.
+    final toPort = toPorts.where((p) => p.portId == 'port-in').firstOrNull;
+
+    if (fromPort == null || toPort == null) return false;
+    return NodeTemplatePorts.arePortsCompatible(fromPort, toPort);
+  }
+
+  String _inferObjectType(CanvasItem item) {
+    final objectId = item.objectId;
+    if (objectId == null) return 'default';
+    if (objectId.startsWith('project')) return 'project';
+    if (objectId.startsWith('task')) return 'task';
+    if (objectId.startsWith('deliverable')) return 'deliverable';
+    if (objectId.startsWith('session')) return 'session';
+    if (objectId.startsWith('event')) return 'event';
+    if (objectId.startsWith('contextRequirement')) return 'contextRequirement';
+    if (objectId.startsWith('actualContext')) return 'actualContext';
+    return 'default';
+  }
+
+  Future<void> _addLink(
+      String fromId, String fromPort, String toId, String toPort) async {
     final workspaceState = ref.read(workspaceControllerProvider);
     final workspaceId = workspaceState.workspaceId;
     final tabId = workspaceState.activeTabId;
 
     if (workspaceId.isEmpty || tabId == null) return;
 
+    // Optimistically render the link immediately.
+    final optimisticId =
+        'link_local_${DateTime.now().millisecondsSinceEpoch}_${DateTime.now().microsecond % 1000}';
+    widget.controller.addLink(
+      CanvasLink(
+        linkId: optimisticId,
+        fromItemId: fromId,
+        fromPortId: fromPort,
+        toItemId: toId,
+        toPortId: toPort,
+        relationType: 'outboundDependency',
+      ),
+    );
+
     final addLinkOp = ref.read(canvasAddLinkOpProvider);
-    await addLinkOp.run(CanvasAddLinkInput(
+    final result = await addLinkOp.run(CanvasAddLinkInput(
       workspaceId: workspaceId,
       tabId: tabId,
       fromItemId: fromId,
@@ -311,6 +507,27 @@ class _FlowCanvasViewState extends ConsumerState<FlowCanvasView> {
       toPortId: toPort,
       relationType: 'outboundDependency',
     ));
+
+    // Replace optimistic id with persisted id when possible.
+    if (result.ok) {
+      final persistedId = result.value!.linkId;
+      if (persistedId != optimisticId) {
+        widget.controller.removeLink(optimisticId);
+        widget.controller.addLink(
+          CanvasLink(
+            linkId: persistedId,
+            fromItemId: fromId,
+            fromPortId: fromPort,
+            toItemId: toId,
+            toPortId: toPort,
+            relationType: 'outboundDependency',
+          ),
+        );
+      }
+    } else {
+      // Revert optimistic link on failure.
+      widget.controller.removeLink(optimisticId);
+    }
   }
 
   Widget _buildTextDisplay(CanvasItem item) {
@@ -318,7 +535,8 @@ class _FlowCanvasViewState extends ConsumerState<FlowCanvasView> {
     final text = config?['text'] as String? ?? 'Text';
     final styleConfig = config?['style'] as Map<String, dynamic>?;
     final fontSize = styleConfig?['fontSize'] as double? ?? 16.0;
-    final colorInt = styleConfig?['color'] as int? ?? LH2Colors.textPrimary.value;
+    final colorInt =
+        styleConfig?['color'] as int? ?? LH2Colors.textPrimary.value;
     final style = TextStyle(
       fontSize: fontSize,
       color: Color(colorInt),
@@ -336,7 +554,8 @@ class _FlowCanvasViewState extends ConsumerState<FlowCanvasView> {
     final text = config?['text'] as String? ?? 'Text';
     final styleConfig = config?['style'] as Map<String, dynamic>?;
     final fontSize = styleConfig?['fontSize'] as double? ?? 16.0;
-    final colorInt = styleConfig?['color'] as int? ?? LH2Colors.textPrimary.value;
+    final colorInt =
+        styleConfig?['color'] as int? ?? LH2Colors.textPrimary.value;
     final style = TextStyle(
       fontSize: fontSize,
       color: Color(colorInt),
@@ -367,7 +586,8 @@ class _FlowCanvasViewState extends ConsumerState<FlowCanvasView> {
     _textPersistenceTimer?.cancel();
     _textPersistenceTimer = Timer(const Duration(milliseconds: 500), () {
       if (_editingItemId != null && _textController != null) {
-        final newConfig = Map<String, dynamic>.from(widget.controller.items[_editingItemId!]!.config ?? {});
+        final newConfig = Map<String, dynamic>.from(
+            widget.controller.items[_editingItemId!]!.config ?? {});
         newConfig['text'] = _textController!.text;
         widget.controller.updateItemConfig(_editingItemId!, newConfig);
       }
@@ -376,7 +596,8 @@ class _FlowCanvasViewState extends ConsumerState<FlowCanvasView> {
 
   void _commitTextEdit() {
     if (_editingItemId == null || _textController == null) return;
-    final newConfig = Map<String, dynamic>.from(widget.controller.items[_editingItemId!]!.config ?? {});
+    final newConfig = Map<String, dynamic>.from(
+        widget.controller.items[_editingItemId!]!.config ?? {});
     newConfig['text'] = _textController!.text;
     widget.controller.updateItemConfig(_editingItemId!, newConfig);
     _textController!.removeListener(_debounceTextChange);
@@ -414,9 +635,9 @@ class _FlowCanvasViewState extends ConsumerState<FlowCanvasView> {
   void _handleTapUp(TapUpDetails details) {
     // Only clear selection if we tapped the actual background,
     // not just the widget area (which includes items).
-    // In Flutter, onTapUp on a parent background detector often triggers 
+    // In Flutter, onTapUp on a parent background detector often triggers
     // even if a child detector also triggered, unless we hit-test.
-    
+
     final worldPos = widget.controller.screenToWorld(details.localPosition);
     bool hitItem = false;
     for (final item in widget.controller.items.values) {
@@ -559,6 +780,19 @@ class _FlowCanvasViewState extends ConsumerState<FlowCanvasView> {
   void _addDemoItems() {
     for (final demoItem in DemoCanvasItems.demoItems) {
       widget.controller.addItem(demoItem);
+    }
+    // Add a demo link between the first two demo nodes so developers can
+    // visually verify link rendering quickly.
+    if (widget.controller.items.containsKey('demo-1') &&
+        widget.controller.items.containsKey('demo-2')) {
+      widget.controller.addLink(const CanvasLink(
+        linkId: 'link_demo_1_2',
+        fromItemId: 'demo-1',
+        fromPortId: 'port-out',
+        toItemId: 'demo-2',
+        toPortId: 'port-in',
+        relationType: 'outboundDependency',
+      ));
     }
   }
 

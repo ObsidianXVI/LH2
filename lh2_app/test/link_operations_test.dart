@@ -61,8 +61,9 @@ void main() {
       expect(result.ok, true);
       expect(result.value?.linkId, isNotNull);
       expect(mockRepo.lastPatch!.links!.length, equals(1));
-      
-      final linkData = mockRepo.lastPatch!.links!.values.first as Map<String, Object?>;
+
+      final linkData =
+          mockRepo.lastPatch!.links!.values.first as Map<String, Object?>;
       expect(linkData['fromItemId'], equals('item1'));
       expect(linkData['fromPortId'], equals('port-out'));
       expect(linkData['toItemId'], equals('item2'));
@@ -107,7 +108,6 @@ void main() {
         items: {},
         links: {
           'link1': {
-            'linkId': 'link1',
             'fromItemId': 'item1',
             'fromPortId': 'port-out',
             'toItemId': 'item2',
@@ -115,7 +115,6 @@ void main() {
             'relationType': 'outboundDependency',
           },
           'link2': {
-            'linkId': 'link2',
             'fromItemId': 'item2',
             'fromPortId': 'port-out',
             'toItemId': 'item3',

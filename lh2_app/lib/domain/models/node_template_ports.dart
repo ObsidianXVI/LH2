@@ -1,13 +1,31 @@
 import 'package:lh2_app/domain/notifiers/canvas_controller_impl.dart';
 
+/// Port type compatibility rules.
+///
+/// For now, the compatibility rule is strict equality of `portType`, and
+/// direction must be out -> in.
+///
+/// This is intentionally centralized so we can later expand to richer
+/// compatibility semantics (e.g. `logic` can connect to `dependency`, unions,
+/// wildcards, etc.) without changing UI/controller code.
+class CanvasPortCompatibility {
+  static bool isCompatible({required String fromType, required String toType}) {
+    return fromType == toType;
+  }
+}
+
 /// Port specifications for node templates
 class NodeTemplatePorts {
   /// Validates port compatibility between two ports
-  static bool arePortsCompatible(CanvasPortSpec fromPort, CanvasPortSpec toPort) {
+  static bool arePortsCompatible(
+      CanvasPortSpec fromPort, CanvasPortSpec toPort) {
     // Basic validation: out port can connect to in port of same type
-    return fromPort.direction == 'out' && 
-           toPort.direction == 'in' && 
-           fromPort.portType == toPort.portType;
+    return fromPort.direction == 'out' &&
+        toPort.direction == 'in' &&
+        CanvasPortCompatibility.isCompatible(
+          fromType: fromPort.portType,
+          toType: toPort.portType,
+        );
   }
 
   /// Gets port specifications for a node template based on object type
@@ -15,49 +33,66 @@ class NodeTemplatePorts {
     switch (objectType) {
       case 'project':
         return [
-          const CanvasPortSpec(portId: 'port-in', direction: 'in', portType: 'dependency'),
-          const CanvasPortSpec(portId: 'port-out', direction: 'out', portType: 'dependency'),
+          const CanvasPortSpec(
+              portId: 'port-in', direction: 'in', portType: 'dependency'),
+          const CanvasPortSpec(
+              portId: 'port-out', direction: 'out', portType: 'dependency'),
         ];
       case 'task':
         return [
-          const CanvasPortSpec(portId: 'port-in', direction: 'in', portType: 'dependency'),
-          const CanvasPortSpec(portId: 'port-out', direction: 'out', portType: 'dependency'),
+          const CanvasPortSpec(
+              portId: 'port-in', direction: 'in', portType: 'dependency'),
+          const CanvasPortSpec(
+              portId: 'port-out', direction: 'out', portType: 'dependency'),
         ];
       case 'deliverable':
         return [
-          const CanvasPortSpec(portId: 'port-in', direction: 'in', portType: 'dependency'),
-          const CanvasPortSpec(portId: 'port-out', direction: 'out', portType: 'dependency'),
+          const CanvasPortSpec(
+              portId: 'port-in', direction: 'in', portType: 'dependency'),
+          const CanvasPortSpec(
+              portId: 'port-out', direction: 'out', portType: 'dependency'),
         ];
       case 'session':
         return [
-          const CanvasPortSpec(portId: 'port-in', direction: 'in', portType: 'dependency'),
-          const CanvasPortSpec(portId: 'port-out', direction: 'out', portType: 'dependency'),
+          const CanvasPortSpec(
+              portId: 'port-in', direction: 'in', portType: 'dependency'),
+          const CanvasPortSpec(
+              portId: 'port-out', direction: 'out', portType: 'dependency'),
         ];
       case 'event':
         return [
-          const CanvasPortSpec(portId: 'port-in', direction: 'in', portType: 'dependency'),
-          const CanvasPortSpec(portId: 'port-out', direction: 'out', portType: 'dependency'),
+          const CanvasPortSpec(
+              portId: 'port-in', direction: 'in', portType: 'dependency'),
+          const CanvasPortSpec(
+              portId: 'port-out', direction: 'out', portType: 'dependency'),
         ];
       case 'contextRequirement':
         return [
-          const CanvasPortSpec(portId: 'port-in', direction: 'in', portType: 'dependency'),
-          const CanvasPortSpec(portId: 'port-out', direction: 'out', portType: 'dependency'),
+          const CanvasPortSpec(
+              portId: 'port-in', direction: 'in', portType: 'dependency'),
+          const CanvasPortSpec(
+              portId: 'port-out', direction: 'out', portType: 'dependency'),
         ];
       case 'actualContext':
         return [
-          const CanvasPortSpec(portId: 'port-in', direction: 'in', portType: 'dependency'),
-          const CanvasPortSpec(portId: 'port-out', direction: 'out', portType: 'dependency'),
+          const CanvasPortSpec(
+              portId: 'port-in', direction: 'in', portType: 'dependency'),
+          const CanvasPortSpec(
+              portId: 'port-out', direction: 'out', portType: 'dependency'),
         ];
       default:
         return [
-          const CanvasPortSpec(portId: 'port-in', direction: 'in', portType: 'dependency'),
-          const CanvasPortSpec(portId: 'port-out', direction: 'out', portType: 'dependency'),
+          const CanvasPortSpec(
+              portId: 'port-in', direction: 'in', portType: 'dependency'),
+          const CanvasPortSpec(
+              portId: 'port-out', direction: 'out', portType: 'dependency'),
         ];
     }
   }
 
   /// Extracts port specifications from a node template's renderSpec
-  static List<CanvasPortSpec> extractPortsFromRenderSpec(Map<String, dynamic> renderSpec) {
+  static List<CanvasPortSpec> extractPortsFromRenderSpec(
+      Map<String, dynamic> renderSpec) {
     final portsJson = renderSpec['ports'] as List<dynamic>?;
     if (portsJson == null) {
       // Default ports if none specified

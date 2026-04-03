@@ -257,18 +257,59 @@ abstract class CanvasController extends ChangeNotifier {
   /// Active link creation state
   String? _pendingFromItemId;
   String? _pendingFromPortId;
+  Offset? _pendingPointerScreen;
   String? get pendingFromItemId => _pendingFromItemId;
   String? get pendingFromPortId => _pendingFromPortId;
+  Offset? get pendingPointerScreen => _pendingPointerScreen;
 
   void startLinking(String itemId, String portId) {
     _pendingFromItemId = itemId;
     _pendingFromPortId = portId;
+
+    // Compute an initial pointer screen position anchored at the from-port so
+    // the pending link is visible immediately (no cursor move required).
+    final item = _items[itemId];
+    if (item != null) {
+      final worldPort = (portId.contains('out'))
+          ? Offset(item.worldRect.right,
+              item.worldRect.top + item.worldRect.height / 2)
+          : Offset(item.worldRect.left,
+              item.worldRect.top + item.worldRect.height / 2);
+
+      // Offset the initial pointer slightly so a short preview of the link
+      // is immediately visible to the user without having to move the mouse.
+      final anchorScreen = worldToScreen(worldPort);
+      final offsetDir = portId.contains('out') ? Offset(40, 0) : Offset(-40, 0);
+      _pendingPointerScreen = anchorScreen + offsetDir;
+    } else {
+      _pendingPointerScreen = null;
+    }
+
+    // Debug
+    // ignore: avoid_print
+    print(
+        '[CanvasController] startLinking: $itemId.$portId pendingScreen=$_pendingPointerScreen');
     notifyListeners();
   }
 
   void cancelLinking() {
     _pendingFromItemId = null;
     _pendingFromPortId = null;
+    _pendingPointerScreen = null;
+    // ignore: avoid_print
+    print('[CanvasController] cancelLinking');
+    notifyListeners();
+  }
+
+  /// Update the current pointer position (screen coords) while linking.
+  ///
+  /// This enables the link overlay to render a "pending" link following the
+  /// cursor.
+  void updatePendingPointerScreen(Offset screenPos) {
+    if (_pendingFromItemId == null) return;
+    _pendingPointerScreen = screenPos;
+    // ignore: avoid_print
+    // print('[CanvasController] updatePendingPointerScreen: $screenPos');
     notifyListeners();
   }
 
@@ -277,8 +318,9 @@ abstract class CanvasController extends ChangeNotifier {
     if (_pendingFromItemId == null || _pendingFromPortId == null) return false;
     if (_pendingFromItemId == targetItemId) return false;
 
-    // For now, allow any node as a target (simplified validation)
-    // In a full implementation, this would check port compatibility
+    // Default impl: any node is a valid target.
+    // FlowCanvasView will do richer port compatibility checks based on
+    // NodeTemplate.renderSpec ports.
     final targetItem = _items[targetItemId];
     return targetItem != null && targetItem.itemType == 'node';
   }
@@ -379,7 +421,8 @@ abstract class CanvasController extends ChangeNotifier {
   }
 
   /// Update an item's rectangle
-  void updateItemRect(String itemId, Rect newWorldRect, {CanvasItemSnapState? snap}) {
+  void updateItemRect(String itemId, Rect newWorldRect,
+      {CanvasItemSnapState? snap}) {
     final item = _items[itemId];
     if (item != null) {
       _items[itemId] = CanvasItem(
@@ -421,12 +464,17 @@ abstract class CanvasController extends ChangeNotifier {
   /// Add a link to the canvas
   void addLink(CanvasLink link) {
     _links[link.linkId] = link;
+    // ignore: avoid_print
+    print(
+        '[CanvasController] addLink: ${link.linkId} ${link.fromItemId}->${link.toItemId}');
     notifyListeners();
   }
 
   /// Remove a link from the canvas
   void removeLink(String linkId) {
     _links.remove(linkId);
+    // ignore: avoid_print
+    print('[CanvasController] removeLink: $linkId');
     notifyListeners();
   }
 
@@ -616,11 +664,13 @@ class CalendarCanvasController extends CanvasController {
   void handleCmdScroll(double deltaY) {
     // k is a sensitivity constant
     const k = 0.001;
-    final double nextMinutesPerPixel = (minutesPerPixel * Math.exp(k * deltaY)).clamp(0.01, 1440.0);
-    
+    final double nextMinutesPerPixel =
+        (minutesPerPixel * Math.exp(k * deltaY)).clamp(0.01, 1440.0);
+
     int nextRuleInterval = ruleIntervalMinutes;
-    final double pixelSpacing = nextRuleInterval / nextMinutesPerPixel * viewport.zoom;
-    
+    final double pixelSpacing =
+        nextRuleInterval / nextMinutesPerPixel * viewport.zoom;
+
     const double minPx = 50.0;
     const double maxPx = 200.0;
 

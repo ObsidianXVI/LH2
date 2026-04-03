@@ -64,7 +64,8 @@ class CanvasAddItemOutput {
 /// Adds a new item (node or widget) to the canvas.
 ///
 /// Operation ID: api.canvas.addItem
-class CanvasAddItemOp extends LH2Operation<CanvasAddItemInput, CanvasAddItemOutput> {
+class CanvasAddItemOp
+    extends LH2Operation<CanvasAddItemInput, CanvasAddItemOutput> {
   final WorkspaceRepository _repo;
 
   CanvasAddItemOp(this._repo);
@@ -73,7 +74,8 @@ class CanvasAddItemOp extends LH2Operation<CanvasAddItemInput, CanvasAddItemOutp
   String get operationId => 'api.canvas.addItem';
 
   @override
-  Future<LH2OpResult<CanvasAddItemOutput>> execute(CanvasAddItemInput input) async {
+  Future<LH2OpResult<CanvasAddItemOutput>> execute(
+      CanvasAddItemInput input) async {
     try {
       // Validate input
       if (input.workspaceId.isEmpty || input.tabId.isEmpty) {
@@ -110,7 +112,8 @@ class CanvasAddItemOp extends LH2Operation<CanvasAddItemInput, CanvasAddItemOutp
       }
 
       // Generate item ID
-      final itemId = '${input.itemType}_${DateTime.now().millisecondsSinceEpoch}_${_randomSuffix()}';
+      final itemId =
+          '${input.itemType}_${DateTime.now().millisecondsSinceEpoch}_${_randomSuffix()}';
 
       // Build item data
       final itemData = <String, Object?>{
@@ -206,8 +209,8 @@ class CanvasUpdateViewportOutput {
 /// This is a high-frequency operation that should be debounced by the caller.
 ///
 /// Operation ID: api.canvas.updateViewport
-class CanvasUpdateViewportOp
-    extends LH2Operation<CanvasUpdateViewportInput, CanvasUpdateViewportOutput> {
+class CanvasUpdateViewportOp extends LH2Operation<CanvasUpdateViewportInput,
+    CanvasUpdateViewportOutput> {
   final WorkspaceRepository _repo;
 
   CanvasUpdateViewportOp(this._repo);
@@ -229,7 +232,8 @@ class CanvasUpdateViewportOp
       final currentTab = await _repo.getTab(input.workspaceId, input.tabId);
 
       // Merge viewport update into existing controller
-      final updatedController = Map<String, Object?>.from(currentTab.controller);
+      final updatedController =
+          Map<String, Object?>.from(currentTab.controller);
       updatedController['viewport'] = {
         'panX': input.panX,
         'panY': input.panY,
@@ -336,9 +340,10 @@ class CanvasAddLinkOp
         );
       }
 
-      final linkId = 'link_${DateTime.now().millisecondsSinceEpoch}';
+      final linkId =
+          'link_${DateTime.now().millisecondsSinceEpoch}_${DateTime.now().microsecond % 1000}';
+      // Persist links as a map of linkId -> link payload (no redundant linkId field)
       final linkData = {
-        'linkId': linkId,
         'fromItemId': input.fromItemId,
         'fromPortId': input.fromPortId,
         'toItemId': input.toItemId,
@@ -426,7 +431,9 @@ class CanvasDeleteLinkOp
     CanvasDeleteLinkInput input,
   ) async {
     try {
-      if (input.workspaceId.isEmpty || input.tabId.isEmpty || input.linkId.isEmpty) {
+      if (input.workspaceId.isEmpty ||
+          input.tabId.isEmpty ||
+          input.linkId.isEmpty) {
         return LH2OpResult.error(
           createError(
             errorCode: LH2ErrorCodes.invalidInput,
