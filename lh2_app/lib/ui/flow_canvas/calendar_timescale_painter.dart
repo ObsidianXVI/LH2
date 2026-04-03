@@ -19,32 +19,36 @@ class CalendarTimescalePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = LH2Colors.border.withOpacity(0.5)
+      ..color = LH2Colors.border.withOpacity(0.3)
       ..strokeWidth = 1.0;
 
     final double pixelSpacing = ruleIntervalMinutes / minutesPerPixel * zoom;
     if (pixelSpacing <= 0) return;
 
-    // Calculate the start of the visible area in world coordinates
+    // Calculate the start of the visible area in world coordinates (minutes)
+    // pan.dx is the center of the viewport in world coordinates.
     final double worldViewportWidth = viewportSize.width / zoom;
-    final double startWorldX = pan.dx - worldViewportWidth / 2;
-    final double endWorldX = pan.dx + worldViewportWidth / 2;
+    final double startMinutes = pan.dx - worldViewportWidth / 2;
+    final double endMinutes = pan.dx + worldViewportWidth / 2;
 
-    // Convert world X to minutes from an arbitrary epoch if needed, 
-    // but here we just use world X as minutes for simplicity of the rule drawing.
-    // The actual time mapping will be handled by the controller/view.
-    
-    final double startMinutes = startWorldX;
     final double firstRuleMinutes = (startMinutes / ruleIntervalMinutes).ceil() * ruleIntervalMinutes.toDouble();
 
-    for (double m = firstRuleMinutes; m <= endWorldX; m += ruleIntervalMinutes) {
+    for (double m = firstRuleMinutes; m <= endMinutes; m += ruleIntervalMinutes) {
       final double screenX = (m - pan.dx) * zoom + viewportSize.width / 2;
+      
+      // Vertical rules for timescale
       canvas.drawLine(
-        Offset(screenX, 0),
+        Offset(screenX, 22), // Start below the sticky date markers area (22px high)
         Offset(screenX, viewportSize.height),
         paint,
       );
     }
+    
+    // Horizontal line separating top bar from timescale
+    final separatorPaint = Paint()
+      ..color = LH2Colors.border
+      ..strokeWidth = 1.0;
+    canvas.drawLine(const Offset(0, 22), Offset(viewportSize.width, 22), separatorPaint);
   }
 
   @override

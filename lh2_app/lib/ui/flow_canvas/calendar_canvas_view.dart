@@ -60,14 +60,18 @@ class _CalendarCanvasViewState extends ConsumerState<CalendarCanvasView> {
 
         return Listener(
           onPointerSignal: (event) {
-            if (event is PointerScrollEvent) {
-              final modifierState = ref.read(modifierStateProvider);
-              if (modifierState.cmd) {
-                widget.controller.handleCmdScroll(event.scrollDelta.dy);
-              } else {
-                widget.controller.panBy(event.scrollDelta);
+            if (event is PointerSignalEvent) {
+              if (event is PointerScrollEvent) {
+                final modifierState = ref.read(modifierStateProvider);
+                if (modifierState.cmd) {
+                  widget.controller.handleCmdScroll(event.scrollDelta.dy);
+                } else {
+                  // Horizontal scrolling moves forward/backward in time (pan X)
+                  // Vertical scrolling moves up/down (pan Y)
+                  widget.controller.panBy(event.scrollDelta);
+                }
+                setState(() {});
               }
-              setState(() {});
             }
           },
           child: GestureDetector(
@@ -77,7 +81,7 @@ class _CalendarCanvasViewState extends ConsumerState<CalendarCanvasView> {
             behavior: HitTestBehavior.opaque,
             child: Stack(
               children: [
-                // 1) Timescale overlay (CustomPaint)
+                // 1) Timescale overlay (CustomPaint) - Lowest layer
                 CustomPaint(
                   painter: CalendarTimescalePainter(
                     pan: widget.controller.viewport.pan,
@@ -98,7 +102,7 @@ class _CalendarCanvasViewState extends ConsumerState<CalendarCanvasView> {
                   size: viewportSize,
                 ),
 
-                // 3) Sticky markers overlay (top) - To be implemented in Task 2.2.2
+                // 3) Sticky markers overlay (top)
                 _buildStickyMarkersLayer(),
 
                 // Common overlays

@@ -3,6 +3,7 @@ library;
 import 'dart:math' as Math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:timezone/timezone.dart' as tz;
 
 /// Canvas port specification.
 class CanvasPortSpec {
@@ -661,11 +662,23 @@ class CalendarCanvasController extends CanvasController {
     DateTime? anchorStartSgt,
     this.minutesPerPixel = 1.0,
     this.ruleIntervalMinutes = 60,
-  }) : anchorStartSgt = anchorStartSgt ?? DateTime(2024, 1, 1) {
+  }) : anchorStartSgt = anchorStartSgt ?? _defaultAnchorStart() {
     _viewport = viewport;
     _items = Map<String, CanvasItem>.from(items ?? {});
     _links = Map<String, CanvasLink>.from(links ?? {});
     _selection = Set<String>.from(selection ?? {});
+  }
+
+  static DateTime _defaultAnchorStart() {
+    final singapore = tz.getLocation('Asia/Singapore');
+    final nowSgt = tz.TZDateTime.now(singapore);
+    // Start of the week (Monday)
+    return nowSgt.subtract(Duration(days: nowSgt.weekday - 1)).subtract(Duration(
+        hours: nowSgt.hour,
+        minutes: nowSgt.minute,
+        seconds: nowSgt.second,
+        milliseconds: nowSgt.millisecond,
+        microseconds: nowSgt.microsecond));
   }
 
   factory CalendarCanvasController.fromJson(Map<String, Object?> json) {
@@ -718,21 +731,27 @@ class CalendarCanvasController extends CanvasController {
   void handleCmdScroll(double deltaY) {
     // k is a sensitivity constant
     const k = 0.001;
+    // Canonical scale: minutesPerPixel. Scroll up (deltaY > 0) => squish timescale (more minutes per pixel)
+    // Scroll down (deltaY < 0) => expand timescale (fewer minutes per pixel)
+    // Based on requirement: scroll up => squish timescale, scroll down => expand timescale
+    // Squishing means minutesPerPixel increases.
     final double nextMinutesPerPixel =
-        (minutesPerPixel * Math.exp(k * deltaY)).clamp(0.01, 1440.0);
+        (minutesPerPixel * Math.exp(k * deltaY)).clamp(0.01, 1440.0 * 7); // Max 1 week per pixel? Maybe 1440 is enough.
 
     int nextRuleInterval = ruleIntervalMinutes;
-    final double pixelSpacing =
-        nextRuleInterval / nextMinutesPerPixel * viewport.zoom;
+    
+    // Hysteresis thresholds to avoid flicker
+    const double minPx = 60.0;
+    const double maxPx = 180.0;
+    const double hysteresisFactor = 1.1;
 
-    const double minPx = 50.0;
-    const double maxPx = 200.0;
+    double pixelSpacing = nextRuleInterval / nextMinutesPerPixel * viewport.zoom;
 
-    if (pixelSpacing < minPx) {
+    if (pixelSpacing < minPx / hysteresisFactor) {
       if (nextRuleInterval < 1440) {
         nextRuleInterval *= 2;
       }
-    } else if (pixelSpacing > maxPx) {
+    } else if (pixelSpacing > maxPx * hysteresisFactor) {
       if (nextRuleInterval > 60) {
         nextRuleInterval ~/= 2;
       }

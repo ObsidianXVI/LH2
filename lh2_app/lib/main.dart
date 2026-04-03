@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:lh2_app/domain/notifiers/workspace_controller.dart';
 import 'package:lh2_stub/lh2_stub.dart' as lh2;
 
@@ -19,10 +20,13 @@ import 'app/responsive.dart';
 import 'app/modifier_state.dart';
 import 'app/hyperpanel_scaffold.dart';
 import 'ui/flow_canvas/flow_canvas_view.dart';
+import 'ui/flow_canvas/calendar_canvas_view.dart';
 import 'ui/flow_canvas/canvas_provider.dart';
+import 'domain/notifiers/canvas_controller_impl.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  tz.initializeTimeZones();
 
   // Disable browser context menu on web platform
   if (kIsWeb) {
@@ -269,8 +273,15 @@ class _LH2HomePageState extends ConsumerState<LH2HomePage> {
                     );
                   }
                   
-                  // Show the Flow Canvas
-                  return FlowCanvasView(controller: canvasController);
+                  // Show the appropriate canvas view
+                  final controller = canvasController;
+                  if (controller is FlowCanvasController) {
+                    return FlowCanvasView(controller: controller);
+                  } else if (controller is CalendarCanvasController) {
+                    return CalendarCanvasView(controller: (controller as CalendarCanvasController));
+                  }
+                  
+                  return const Center(child: Text('Unsupported canvas kind'));
                 },
               ),
             ),

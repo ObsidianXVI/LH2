@@ -199,7 +199,10 @@ class WorkspaceController extends Notifier<WorkspaceState> {
       'kind': kind.firestoreValue,
       'viewport': {'panX': 0.0, 'panY': 0.0, 'zoom': 1.0},
       if (kind == CanvasKind.flow) 'gridSizePx': 24,
-      // Calendar defaults (Appendix B/C) can be expanded later.
+      if (kind == CanvasKind.calendar) ...{
+        'minutesPerPixel': 1.0,
+        'ruleIntervalMinutes': 60,
+      },
     };
 
     final tabId = await repo.createTab(
