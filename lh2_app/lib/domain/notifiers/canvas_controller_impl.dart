@@ -684,6 +684,11 @@ class CalendarCanvasController extends CanvasController {
   /// Fixed number of interval columns visible across the viewport.
   static const double fixedIntervalsVisible = 12.0;
 
+  // Cmd+scroll tuning: accumulate wheel deltas and only step the interval rung
+  // once the user has scrolled past this threshold.
+  static const double cmdScrollStepThresholdPx = 200.0;
+  double _cmdScrollAccumPx = 0.0;
+
   double _maxMinutesPerPixelForInterval({required int intervalMinutes}) {
     final viewportWidthPx = viewport.viewportSizePx.width;
     if (viewportWidthPx <= 0) return double.infinity;
@@ -786,15 +791,6 @@ class CalendarCanvasController extends CanvasController {
   }
 
   void handleCmdScroll(double deltaY) {
-    // k is a sensitivity constant
-    const k = 0.001;
-    // Canonical scale: minutesPerPixel. Scroll up (deltaY > 0) => squish timescale (more minutes per pixel)
-    // Scroll down (deltaY < 0) => expand timescale (fewer minutes per pixel)
-    // Based on requirement: scroll up => squish timescale, scroll down => expand timescale
-    // Squishing means minutesPerPixel increases.
-    // Canonical scale: minutesPerPixel.
-    // We do NOT quantize minutesPerPixel; it changes continuously so rules move
-    // in real-time while scrolling.
     int nextRuleInterval = ruleIntervalMinutes;
 
     // Hysteresis thresholds to avoid flicker.
@@ -820,34 +816,40 @@ class CalendarCanvasController extends CanvasController {
     // interval size (time per column). This changes the *time* represented,
     // not the column width.
     if (pixelSpacing < minPx / hysteresisFactor) {
-      // Columns too narrow => zoom level too far out for current viewport size.
-      // Step interval up.
+      // Columns too narrow => step interval up.
       if (idx < allowedRuleIntervalsMinutes.length - 1) {
         idx++;
         nextRuleInterval = allowedRuleIntervalsMinutes[idx];
       } else {
         nextRuleInterval = maxRuleIntervalMinutes;
       }
+      // Reset scroll accumulator when we auto-correct.
+      _cmdScrollAccumPx = 0.0;
     } else if (pixelSpacing > maxPx * hysteresisFactor) {
-      // Columns too wide => zoom level too far in.
-      // Step interval down.
+      // Columns too wide => step interval down.
       if (idx > 0) {
         idx--;
         nextRuleInterval = allowedRuleIntervalsMinutes[idx];
       } else {
         nextRuleInterval = minRuleIntervalMinutes;
       }
+      _cmdScrollAccumPx = 0.0;
     } else {
-      // Within thresholds: use Cmd+scroll to change time-per-column.
-      // We interpret scroll direction as moving along the ladder.
-      if (deltaY > 0 && idx < allowedRuleIntervalsMinutes.length - 1) {
-        // Squish => show more time per column
-        idx++;
-        nextRuleInterval = allowedRuleIntervalsMinutes[idx];
-      } else if (deltaY < 0 && idx > 0) {
-        // Expand => show less time per column
-        idx--;
-        nextRuleInterval = allowedRuleIntervalsMinutes[idx];
+      // Within thresholds: accumulate Cmd+scroll and step interval only when
+      // exceeding a threshold to reduce sensitivity.
+      _cmdScrollAccumPx += deltaY;
+
+      while (_cmdScrollAccumPx.abs() >= cmdScrollStepThresholdPx) {
+        final dir = _cmdScrollAccumPx.sign; // + => zoom out, - => zoom in
+        if (dir > 0 && idx < allowedRuleIntervalsMinutes.length - 1) {
+          idx++;
+          nextRuleInterval = allowedRuleIntervalsMinutes[idx];
+        } else if (dir < 0 && idx > 0) {
+          idx--;
+          nextRuleInterval = allowedRuleIntervalsMinutes[idx];
+        }
+
+        _cmdScrollAccumPx -= dir * cmdScrollStepThresholdPx;
       }
     }
 
@@ -868,6 +870,20 @@ class CalendarCanvasController extends CanvasController {
     ruleIntervalMinutes = nextRuleInterval;
     _enforceMaxIntervalsVisibleConstraint();
     notifyListeners();
+  }
+
+  @override
+  void panBy(Offset deltaScreen) {
+    // Calendar X-axis is time (minutes). Convert pixel delta to minutes using
+    // current minutesPerPixel so panning feels consistent across scales.
+    //
+    // Y-axis keeps the normal canvas behavior (world units scale with zoom)
+    // because nodes/items still use the shared world coordinate system.
+    final deltaWorld = Offset(
+      deltaScreen.dx * minutesPerPixel,
+      deltaScreen.dy / viewport.zoom,
+    );
+    _updateViewport(viewport.copyWith(pan: viewport.pan + deltaWorld));
   }
 
   double snapWorldX(double worldX) {

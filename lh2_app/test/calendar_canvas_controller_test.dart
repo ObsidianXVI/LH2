@@ -35,14 +35,19 @@ void main() {
       final initialMinutesPerPixel = controller.minutesPerPixel;
 
       // Scroll up => squish timescale (more time per column)
+      // With scroll-accumulator threshold, small deltas should NOT change rung.
       controller.handleCmdScroll(100.0);
+      expect(controller.ruleIntervalMinutes, 60);
+
+      // Exceed threshold
+      controller.handleCmdScroll(200.0);
       expect(controller.ruleIntervalMinutes, 120);
       expect(controller.minutesPerPixel, greaterThan(initialMinutesPerPixel));
 
       final midMinutesPerPixel = controller.minutesPerPixel;
 
       // Scroll down => expand timescale (less time per column)
-      controller.handleCmdScroll(-100.0);
+      controller.handleCmdScroll(-400.0);
       expect(controller.ruleIntervalMinutes, 60);
       expect(controller.minutesPerPixel, lessThan(midMinutesPerPixel));
     });
@@ -65,8 +70,12 @@ void main() {
       // With fixed 12 columns visible:
       expect(controller.minutesPerPixel, closeTo(0.9, 1e-6));
 
-      // Any zoom-out (deltaY>0) steps the interval up.
+      // With accumulator, small scroll does not step.
       controller.handleCmdScroll(50.0);
+      expect(controller.ruleIntervalMinutes, 60);
+
+      // Exceed threshold to step.
+      controller.handleCmdScroll(200.0);
       expect(controller.ruleIntervalMinutes, 120);
 
       // Squish more to cross threshold
@@ -83,7 +92,7 @@ void main() {
       // Zooming in enough should allow the interval ladder to step back down.
       // With the fixed-12-columns model, interval changes are discrete;
       // one scroll event steps down by one rung.
-      expect(controller.ruleIntervalMinutes, 120);
+      expect(controller.ruleIntervalMinutes, 60);
     });
 
     test('Zoom out range reaches 1 week and keeps 12 columns', () {
