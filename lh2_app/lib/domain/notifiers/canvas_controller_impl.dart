@@ -654,6 +654,56 @@ class CalendarCanvasController extends CanvasController {
   double minutesPerPixel;
   int ruleIntervalMinutes;
 
+  /// The discrete time steps the UI can use for rule rendering.
+  ///
+  /// This is intentionally an explicit ladder (instead of always doubling)
+  /// so we can include human-friendly steps like 12h.
+  static const List<int> allowedRuleIntervalsMinutes = <int>[
+    60, // 1h
+    120, // 2h
+    240, // 4h
+    480, // 8h
+    720, // 12h
+    960, // 16h
+    1440, // 1d
+    2880, // 2d
+    4320, // 3d
+    5760, // 4d
+    10080, // 1w
+  ];
+
+  static const int minRuleIntervalMinutes = 60;
+  static const int maxRuleIntervalMinutes = 10080;
+
+  /// Target label density at the most zoomed-out view.
+  ///
+  /// When you hit [maxRuleIntervalMinutes], we clamp [minutesPerPixel] so that
+  /// roughly this many intervals are visible across the viewport.
+  static const double maxZoomOutTargetIntervalsVisible = 12.0;
+
+  /// Fixed number of interval columns visible across the viewport.
+  static const double fixedIntervalsVisible = 12.0;
+
+  double _maxMinutesPerPixelForInterval({required int intervalMinutes}) {
+    final viewportWidthPx = viewport.viewportSizePx.width;
+    if (viewportWidthPx <= 0) return double.infinity;
+
+    // viewport world width in minutes = viewportWidthPx / zoom * minutesPerPixel
+    // intervals visible = worldWidth / interval
+    // => minutesPerPixelMax = intervalsVisible * interval * zoom / viewportWidthPx
+    // With fixed columns, minutesPerPixel is *always* ruleIntervalMinutes / columnWidthPx.
+    // columnWidthPx = viewportWidthPx / fixedIntervalsVisible.
+    // => minutesPerPixel = intervalMinutes / (viewportWidthPx / fixedIntervalsVisible)
+    return (fixedIntervalsVisible * intervalMinutes) / viewportWidthPx;
+  }
+
+  void _enforceMaxIntervalsVisibleConstraint() {
+    // With fixed columns, minutesPerPixel is derived and not free.
+    minutesPerPixel = _maxMinutesPerPixelForInterval(
+      intervalMinutes: ruleIntervalMinutes,
+    );
+  }
+
   CalendarCanvasController({
     required CanvasViewport viewport,
     Map<String, CanvasItem>? items,
@@ -667,22 +717,25 @@ class CalendarCanvasController extends CanvasController {
     _items = Map<String, CanvasItem>.from(items ?? {});
     _links = Map<String, CanvasLink>.from(links ?? {});
     _selection = Set<String>.from(selection ?? {});
+
+    _enforceMaxIntervalsVisibleConstraint();
   }
 
   static DateTime _defaultAnchorStart() {
     final singapore = tz.getLocation('Asia/Singapore');
     final nowSgt = tz.TZDateTime.now(singapore);
     // Start of the week (Monday)
-    return nowSgt.subtract(Duration(days: nowSgt.weekday - 1)).subtract(Duration(
-        hours: nowSgt.hour,
-        minutes: nowSgt.minute,
-        seconds: nowSgt.second,
-        milliseconds: nowSgt.millisecond,
-        microseconds: nowSgt.microsecond));
+    return nowSgt.subtract(Duration(days: nowSgt.weekday - 1)).subtract(
+        Duration(
+            hours: nowSgt.hour,
+            minutes: nowSgt.minute,
+            seconds: nowSgt.second,
+            milliseconds: nowSgt.millisecond,
+            microseconds: nowSgt.microsecond));
   }
 
   factory CalendarCanvasController.fromJson(Map<String, Object?> json) {
-    return CalendarCanvasController(
+    final controller = CalendarCanvasController(
       viewport:
           CanvasViewport.fromJson(json['viewport'] as Map<String, Object?>),
       anchorStartSgt: json['anchorStartSgt'] != null
@@ -691,6 +744,10 @@ class CalendarCanvasController extends CanvasController {
       minutesPerPixel: (json['minutesPerPixel'] as num?)?.toDouble() ?? 1.0,
       ruleIntervalMinutes: (json['ruleIntervalMinutes'] as num?)?.toInt() ?? 60,
     ).._initializeFromJson(json);
+
+    // Re-check constraints after JSON init.
+    controller._enforceMaxIntervalsVisibleConstraint();
+    return controller;
   }
 
   @override
@@ -735,30 +792,81 @@ class CalendarCanvasController extends CanvasController {
     // Scroll down (deltaY < 0) => expand timescale (fewer minutes per pixel)
     // Based on requirement: scroll up => squish timescale, scroll down => expand timescale
     // Squishing means minutesPerPixel increases.
-    final double nextMinutesPerPixel =
-        (minutesPerPixel * Math.exp(k * deltaY)).clamp(0.01, 1440.0 * 7); // Max 1 week per pixel? Maybe 1440 is enough.
-
+    // Canonical scale: minutesPerPixel.
+    // We do NOT quantize minutesPerPixel; it changes continuously so rules move
+    // in real-time while scrolling.
     int nextRuleInterval = ruleIntervalMinutes;
-    
-    // Hysteresis thresholds to avoid flicker
-    const double minPx = 60.0;
-    const double maxPx = 180.0;
+
+    // Hysteresis thresholds to avoid flicker.
+    // Within these thresholds, we keep the same rule interval and only
+    // minutesPerPixel changes => rules squeeze/expand smoothly in real time.
+    const double minPx = 40.0;
+    const double maxPx = 420.0;
     const double hysteresisFactor = 1.1;
 
-    double pixelSpacing = nextRuleInterval / nextMinutesPerPixel * viewport.zoom;
+    // With fixed columns, pixel spacing is always viewportWidth / fixedIntervalsVisible.
+    final double columnWidthPx =
+        viewport.viewportSizePx.width / fixedIntervalsVisible;
+    double pixelSpacing = columnWidthPx;
 
+    int idx = allowedRuleIntervalsMinutes.indexOf(nextRuleInterval);
+    if (idx == -1) {
+      // If persisted state contains an unexpected interval, snap it.
+      idx = 0;
+      nextRuleInterval = allowedRuleIntervalsMinutes[idx];
+    }
+
+    // Keep the column width within a comfortable pixel range by stepping the
+    // interval size (time per column). This changes the *time* represented,
+    // not the column width.
     if (pixelSpacing < minPx / hysteresisFactor) {
-      if (nextRuleInterval < 1440) {
-        nextRuleInterval *= 2;
+      // Columns too narrow => zoom level too far out for current viewport size.
+      // Step interval up.
+      if (idx < allowedRuleIntervalsMinutes.length - 1) {
+        idx++;
+        nextRuleInterval = allowedRuleIntervalsMinutes[idx];
+      } else {
+        nextRuleInterval = maxRuleIntervalMinutes;
       }
     } else if (pixelSpacing > maxPx * hysteresisFactor) {
-      if (nextRuleInterval > 60) {
-        nextRuleInterval ~/= 2;
+      // Columns too wide => zoom level too far in.
+      // Step interval down.
+      if (idx > 0) {
+        idx--;
+        nextRuleInterval = allowedRuleIntervalsMinutes[idx];
+      } else {
+        nextRuleInterval = minRuleIntervalMinutes;
+      }
+    } else {
+      // Within thresholds: use Cmd+scroll to change time-per-column.
+      // We interpret scroll direction as moving along the ladder.
+      if (deltaY > 0 && idx < allowedRuleIntervalsMinutes.length - 1) {
+        // Squish => show more time per column
+        idx++;
+        nextRuleInterval = allowedRuleIntervalsMinutes[idx];
+      } else if (deltaY < 0 && idx > 0) {
+        // Expand => show less time per column
+        idx--;
+        nextRuleInterval = allowedRuleIntervalsMinutes[idx];
       }
     }
 
-    minutesPerPixel = nextMinutesPerPixel;
+    // No additional zoom-out enforcement needed: fixedIntervalsVisible means
+    // we always render 12 columns, and zoom extent is represented solely by
+    // stepping ruleIntervalMinutes up to 1w.
+
+    // Hard clamp the rule interval.
+    if (nextRuleInterval < minRuleIntervalMinutes) {
+      nextRuleInterval = minRuleIntervalMinutes;
+    }
+    if (nextRuleInterval > maxRuleIntervalMinutes) {
+      nextRuleInterval = maxRuleIntervalMinutes;
+    }
+
+    // (note) We clamp the max zoom-out extent for every interval above.
+
     ruleIntervalMinutes = nextRuleInterval;
+    _enforceMaxIntervalsVisibleConstraint();
     notifyListeners();
   }
 

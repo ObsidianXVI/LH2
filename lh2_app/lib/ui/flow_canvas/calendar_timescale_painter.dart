@@ -22,33 +22,42 @@ class CalendarTimescalePainter extends CustomPainter {
       ..color = LH2Colors.border.withOpacity(0.3)
       ..strokeWidth = 1.0;
 
-    final double pixelSpacing = ruleIntervalMinutes / minutesPerPixel * zoom;
+    final double pixelSpacing = ruleIntervalMinutes / minutesPerPixel;
     if (pixelSpacing <= 0) return;
 
     // Calculate the start of the visible area in world coordinates (minutes)
     // pan.dx is the center of the viewport in world coordinates.
-    final double worldViewportWidth = viewportSize.width / zoom;
-    final double startMinutes = pan.dx - worldViewportWidth / 2;
-    final double endMinutes = pan.dx + worldViewportWidth / 2;
+    // X axis is in minutes.
+    final double worldViewportWidthMinutes =
+        viewportSize.width * minutesPerPixel;
+    final double startMinutes = pan.dx - worldViewportWidthMinutes / 2;
+    final double endMinutes = pan.dx + worldViewportWidthMinutes / 2;
 
-    final double firstRuleMinutes = (startMinutes / ruleIntervalMinutes).ceil() * ruleIntervalMinutes.toDouble();
+    final double firstRuleMinutes =
+        (startMinutes / ruleIntervalMinutes).ceil() *
+            ruleIntervalMinutes.toDouble();
 
-    for (double m = firstRuleMinutes; m <= endMinutes; m += ruleIntervalMinutes) {
-      final double screenX = (m - pan.dx) * zoom + viewportSize.width / 2;
-      
+    for (double m = firstRuleMinutes;
+        m <= endMinutes;
+        m += ruleIntervalMinutes) {
+      final double screenX =
+          (m - pan.dx) / minutesPerPixel + viewportSize.width / 2;
+
       // Vertical rules for timescale
       canvas.drawLine(
-        Offset(screenX, 22), // Start below the sticky date markers area (22px high)
+        Offset(screenX,
+            22), // Start below the sticky date markers area (22px high)
         Offset(screenX, viewportSize.height),
         paint,
       );
     }
-    
+
     // Horizontal line separating top bar from timescale
     final separatorPaint = Paint()
       ..color = LH2Colors.border
       ..strokeWidth = 1.0;
-    canvas.drawLine(const Offset(0, 22), Offset(viewportSize.width, 22), separatorPaint);
+    canvas.drawLine(
+        const Offset(0, 22), Offset(viewportSize.width, 22), separatorPaint);
   }
 
   @override

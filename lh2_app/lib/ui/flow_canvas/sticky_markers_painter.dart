@@ -23,16 +23,17 @@ class StickyMarkersPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final singapore = tz.getLocation('Asia/Singapore');
-    
+
     final textStyle = const TextStyle(
       color: LH2Colors.textSecondary,
       fontSize: 10,
       fontFamily: 'Menlo',
     );
 
-    final double worldViewportWidth = viewportSize.width / zoom;
-    final double startMinutes = pan.dx - worldViewportWidth / 2;
-    final double endMinutes = pan.dx + worldViewportWidth / 2;
+    final double worldViewportWidthMinutes =
+        viewportSize.width * minutesPerPixel;
+    final double startMinutes = pan.dx - worldViewportWidthMinutes / 2;
+    final double endMinutes = pan.dx + worldViewportWidthMinutes / 2;
 
     final double firstRuleMinutes =
         (startMinutes / ruleIntervalMinutes).ceil() *
@@ -45,7 +46,8 @@ class StickyMarkersPainter extends CustomPainter {
     for (double m = firstRuleMinutes;
         m <= endMinutes;
         m += ruleIntervalMinutes) {
-      final double screenX = (m - pan.dx) * zoom + viewportSize.width / 2;
+      final double screenX =
+          (m - pan.dx) / minutesPerPixel + viewportSize.width / 2;
 
       // Calculate Time Label in SGT
       final DateTime timeUtc = anchorStartSgt.add(Duration(minutes: m.toInt()));
@@ -54,12 +56,13 @@ class StickyMarkersPainter extends CustomPainter {
       // Requirement 2.2.3: When ruleIntervalMinutes reaches 1440 (24h):
       // - time markers become dates (21 TUE, 22 WED)
       // - date marker becomes month.
-      
+
       final bool isDayInterval = ruleIntervalMinutes >= 1440;
 
       if (isDayInterval) {
         // Time markers become dates
-        final String dateLabel = DateFormat('dd EEE').format(timeSgt).toUpperCase();
+        final String dateLabel =
+            DateFormat('dd EEE').format(timeSgt).toUpperCase();
         final textPainter = TextPainter(
           text: TextSpan(text: dateLabel, style: textStyle),
           textDirection: TextDirection.ltr,
@@ -68,16 +71,18 @@ class StickyMarkersPainter extends CustomPainter {
 
         // Date marker becomes month
         if (timeSgt.day == 1 || m == firstRuleMinutes) {
-           final String monthLabel = DateFormat('MMMM yyyy').format(timeSgt).toUpperCase();
-           final monthPainter = TextPainter(
-             text: TextSpan(
-               text: monthLabel,
-               style: textStyle.copyWith(fontWeight: FontWeight.bold, color: LH2Colors.textPrimary),
-             ),
-             textDirection: TextDirection.ltr,
-           )..layout();
-           
-           monthPainter.paint(canvas, Offset(screenX + 4, 4));
+          final String monthLabel =
+              DateFormat('MMMM yyyy').format(timeSgt).toUpperCase();
+          final monthPainter = TextPainter(
+            text: TextSpan(
+              text: monthLabel,
+              style: textStyle.copyWith(
+                  fontWeight: FontWeight.bold, color: LH2Colors.textPrimary),
+            ),
+            textDirection: TextDirection.ltr,
+          )..layout();
+
+          monthPainter.paint(canvas, Offset(screenX + 4, 4));
         }
       } else {
         // Normal behavior
@@ -93,7 +98,8 @@ class StickyMarkersPainter extends CustomPainter {
         // Draw date marker (top row) if it's the start of a day or first visible
         // To avoid overcrowding, only draw if it's 00:00 or first visible
         if (timeSgt.hour == 0 && timeSgt.minute == 0 || m == firstRuleMinutes) {
-          final String dateLabel = DateFormat('dd EEE').format(timeSgt).toUpperCase();
+          final String dateLabel =
+              DateFormat('dd EEE').format(timeSgt).toUpperCase();
           final datePainter = TextPainter(
             text: TextSpan(
                 text: dateLabel,
