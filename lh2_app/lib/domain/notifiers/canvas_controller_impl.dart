@@ -361,6 +361,11 @@ abstract class CanvasController extends ChangeNotifier {
     _updateViewport(viewport.copyWith(viewportSizePx: viewportSizePx));
   }
 
+  /// Directly set the viewport to preserve state across recreations
+  void setViewport(CanvasViewport newViewport) {
+    _updateViewport(newViewport);
+  }
+
   /// Pan the viewport by a delta in screen coordinates
   void panBy(Offset deltaScreen) {
     final deltaWorld = deltaScreen / viewport.zoom;

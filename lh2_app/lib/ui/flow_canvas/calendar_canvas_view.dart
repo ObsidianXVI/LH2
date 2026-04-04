@@ -64,6 +64,26 @@ class _CalendarCanvasViewState extends ConsumerState<CalendarCanvasView> {
   }
 
   @override
+  void didUpdateWidget(covariant CalendarCanvasView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // If the controller instance changed (due to backend updates), update listeners
+    // so we reflect updates from the new controller and stop listening to the old one.
+    if (oldWidget.controller != widget.controller) {
+      oldWidget.controller.removeListener(_onControllerChanged);
+
+      // Prevent the viewport from "jumping" when the controller is recreated from
+      // Firestore state, which doesn't continuously track pan/zoom changes during active sessions.
+      widget.controller.setViewport(oldWidget.controller.viewport);
+      widget.controller.updateScaling(oldWidget.controller.minutesPerPixel,
+          oldWidget.controller.ruleIntervalMinutes);
+
+      widget.controller.addListener(_onControllerChanged);
+      // Trigger a rebuild to pick up new controller state immediately.
+      setState(() {});
+    }
+  }
+
+  @override
   void dispose() {
     widget.controller.removeListener(_onControllerChanged);
     _removeContextMenu();
@@ -668,10 +688,12 @@ class _CalendarCanvasViewState extends ConsumerState<CalendarCanvasView> {
     }
 
     if (widget.controller.pendingFromItemId != null) {
-      if (hitItemId != null && hitItem != null && hitItemId != widget.controller.pendingFromItemId && _isValidLinkTargetWithPorts(hitItemId)) {
+      if (hitItemId != null &&
+          hitItem != null &&
+          hitItemId != widget.controller.pendingFromItemId &&
+          _isValidLinkTargetWithPorts(hitItemId)) {
         // Preview snap to input port
-        final targetPortWorld = Offset(
-            hitItem.worldRect.left,
+        final targetPortWorld = Offset(hitItem.worldRect.left,
             hitItem.worldRect.top + hitItem.worldRect.height / 2);
         widget.controller.updatePendingPointerScreen(
             widget.controller.worldToScreen(targetPortWorld));
@@ -802,72 +824,74 @@ class _CalendarCanvasViewState extends ConsumerState<CalendarCanvasView> {
                 height: screenRect.height,
                 child: GestureDetector(
                   onPanStart: (_) {
-                  // Close hover popup while dragging (parity with Flow).
-                  ref.read(infoPopupControllerProvider.notifier).close();
-                  _hoverCloseTimer?.cancel();
-                  _hoverCloseTimer = null;
-                  
-                  _dragStartRects[itemId] = item.worldRect;
-                  _dragCumulativeDeltas[itemId] = Offset.zero;
-                },
-                onPanUpdate: (details) {
-                  // Do not drag while linking.
-                  if (isLinking) return;
+                    // Close hover popup while dragging (parity with Flow).
+                    ref.read(infoPopupControllerProvider.notifier).close();
+                    _hoverCloseTimer?.cancel();
+                    _hoverCloseTimer = null;
 
-                  final startRect = _dragStartRects[itemId];
-                  if (startRect == null) return;
+                    _dragStartRects[itemId] = item.worldRect;
+                    _dragCumulativeDeltas[itemId] = Offset.zero;
+                  },
+                  onPanUpdate: (details) {
+                    // Do not drag while linking.
+                    if (isLinking) return;
 
-                  _dragCumulativeDeltas[itemId] = _dragCumulativeDeltas[itemId]! + details.delta;
-                  final cumulativeDelta = _dragCumulativeDeltas[itemId]!;
+                    final startRect = _dragStartRects[itemId];
+                    if (startRect == null) return;
 
-                  final totalDeltaWorld = Offset(
-                    cumulativeDelta.dx * widget.controller.minutesPerPixel,
-                    cumulativeDelta.dy / widget.controller.viewport.zoom,
-                  );
+                    _dragCumulativeDeltas[itemId] =
+                        _dragCumulativeDeltas[itemId]! + details.delta;
+                    final cumulativeDelta = _dragCumulativeDeltas[itemId]!;
 
-                  // Create a temporary item with the starting rect so the total delta is applied properly
-                  final baseItem = CanvasItem(
-                    itemId: item.itemId,
-                    itemType: item.itemType,
-                    worldRect: startRect,
-                    objectId: item.objectId,
-                    objectType: item.objectType,
-                    config: item.config,
-                    snap: item.snap,
-                    disabledByScenario: item.disabledByScenario,
-                  );
+                    final totalDeltaWorld = Offset(
+                      cumulativeDelta.dx * widget.controller.minutesPerPixel,
+                      cumulativeDelta.dy / widget.controller.viewport.zoom,
+                    );
 
-                  final moved = widget.controller.applyMoveWithSnapping(
-                    item: baseItem,
-                    deltaWorld: totalDeltaWorld,
-                    isCmdPressed: ref.read(modifierStateProvider).cmd,
-                  );
+                    // Create a temporary item with the starting rect so the total delta is applied properly
+                    final baseItem = CanvasItem(
+                      itemId: item.itemId,
+                      itemType: item.itemType,
+                      worldRect: startRect,
+                      objectId: item.objectId,
+                      objectType: item.objectType,
+                      config: item.config,
+                      snap: item.snap,
+                      disabledByScenario: item.disabledByScenario,
+                    );
 
-                  Rect newRect = moved.rect;
-                  CanvasItemSnapState newSnap = moved.snap;
+                    final moved = widget.controller.applyMoveWithSnapping(
+                      item: baseItem,
+                      deltaWorld: totalDeltaWorld,
+                      isCmdPressed: ref.read(modifierStateProvider).cmd,
+                    );
 
-                  // Collision check for root-level deliverables
-                  if (item.objectType == 'deliverable' &&
-                      item.config?['isRoot'] == true) {
-                    if (widget.controller.rootDeliverableWouldOverlap(
-                      proposedRect: newRect,
-                      ignoreItemId: item.itemId,
-                    )) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                              'Root-level deliverable cannot overlap with other nodes'),
-                        ),
-                      );
-                      return; // Block move
+                    Rect newRect = moved.rect;
+                    CanvasItemSnapState newSnap = moved.snap;
+
+                    // Collision check for root-level deliverables
+                    if (item.objectType == 'deliverable' &&
+                        item.config?['isRoot'] == true) {
+                      if (widget.controller.rootDeliverableWouldOverlap(
+                        proposedRect: newRect,
+                        ignoreItemId: item.itemId,
+                      )) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                                'Root-level deliverable cannot overlap with other nodes'),
+                          ),
+                        );
+                        return; // Block move
+                      }
                     }
-                  }
 
                     widget.controller.updateItemRect(
                       itemId,
                       newRect,
                       snap: newSnap,
                     );
+                    setState(() {});
                     _debounceItemPersistence(itemId, newRect);
                   },
                   onPanEnd: (_) {

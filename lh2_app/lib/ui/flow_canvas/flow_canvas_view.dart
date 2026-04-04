@@ -72,6 +72,10 @@ class _FlowCanvasViewState extends ConsumerState<FlowCanvasView> {
     // updates from the new controller and stop listening to the old one.
     if (oldWidget.controller != widget.controller) {
       oldWidget.controller.removeListener(_onControllerChanged);
+
+      // Preserve viewport across controller recreations
+      widget.controller.setViewport(oldWidget.controller.viewport);
+
       widget.controller.addListener(_onControllerChanged);
       // Trigger a rebuild to pick up new controller state immediately.
       setState(() {});
