@@ -3,6 +3,7 @@
 /// Run with: flutter test test/firestore_integration_test.dart
 /// Requires Firestore emulator running on localhost:8081.
 library;
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_test/flutter_test.dart';

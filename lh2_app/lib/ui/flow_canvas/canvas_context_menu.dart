@@ -24,7 +24,12 @@ class CanvasContextMenu extends ConsumerStatefulWidget {
   final String tabId;
   final Offset worldPosition;
   final Set<String> selection;
-  final FlowCanvasController controller;
+
+  /// Canvas controller for applying immediate local UI updates.
+  ///
+  /// This is typed as [CanvasController] so the menu can be reused by both the
+  /// Flow and Calendar canvases.
+  final CanvasController controller;
 
   const CanvasContextMenu({
     super.key,

@@ -135,5 +135,35 @@ void main() {
       expect(controller.snapWorldX(22.0), 15.0);
       expect(controller.snapWorldX(23.0), 30.0);
     });
+
+    test('rootDeliverableWouldOverlap detects overlap', () {
+      final viewport = const CanvasViewport(
+        pan: Offset.zero,
+        zoom: 1.0,
+        viewportSizePx: Size(800, 600),
+      );
+      final controller = CalendarCanvasController(viewport: viewport);
+
+      controller.addItem(const CanvasItem(
+        itemId: 'a',
+        itemType: 'node',
+        objectType: 'deliverable',
+        worldRect: Rect.fromLTWH(0, 0, 10, 10),
+      ));
+
+      expect(
+        controller.rootDeliverableWouldOverlap(
+          proposedRect: const Rect.fromLTWH(5, 5, 10, 10),
+        ),
+        isTrue,
+      );
+
+      expect(
+        controller.rootDeliverableWouldOverlap(
+          proposedRect: const Rect.fromLTWH(50, 50, 10, 10),
+        ),
+        isFalse,
+      );
+    });
   });
 }

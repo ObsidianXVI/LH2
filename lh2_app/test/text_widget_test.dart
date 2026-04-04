@@ -87,7 +87,8 @@ void main() {
       controller.updateItemConfig('text-1', newConfig);
 
       expect(controller.items['text-1']!.config!['text'], equals('Updated'));
-      expect(controller.items['text-1']!.config!['style']['fontSize'], equals(16.0));
+      expect(controller.items['text-1']!.config!['style']['fontSize'],
+          equals(16.0));
     });
 
     test('DemoCanvasItems includes text widget', () {

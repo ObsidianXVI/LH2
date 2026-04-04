@@ -64,10 +64,14 @@ class ShortcutsEngine {
     if (event is! KeyDownEvent) return;
 
     final modifiers = <LogicalKeyboardKey>{};
-    if (HardwareKeyboard.instance.isMetaPressed) modifiers.add(LogicalKeyboardKey.meta);
-    if (HardwareKeyboard.instance.isControlPressed) modifiers.add(LogicalKeyboardKey.control);
-    if (HardwareKeyboard.instance.isShiftPressed) modifiers.add(LogicalKeyboardKey.shift);
-    if (HardwareKeyboard.instance.isAltPressed) modifiers.add(LogicalKeyboardKey.alt);
+    if (HardwareKeyboard.instance.isMetaPressed)
+      modifiers.add(LogicalKeyboardKey.meta);
+    if (HardwareKeyboard.instance.isControlPressed)
+      modifiers.add(LogicalKeyboardKey.control);
+    if (HardwareKeyboard.instance.isShiftPressed)
+      modifiers.add(LogicalKeyboardKey.shift);
+    if (HardwareKeyboard.instance.isAltPressed)
+      modifiers.add(LogicalKeyboardKey.alt);
 
     final chord = KeyChord(modifiers: modifiers, key: event.logicalKey);
     _currentSequence.add(chord);

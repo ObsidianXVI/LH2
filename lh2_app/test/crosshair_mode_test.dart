@@ -18,10 +18,10 @@ void main() {
       addTearDown(container.dispose);
 
       final notifier = container.read(crosshairModeControllerProvider.notifier);
-      
+
       notifier.toggle();
       expect(container.read(crosshairModeControllerProvider).enabled, true);
-      
+
       notifier.toggle();
       expect(container.read(crosshairModeControllerProvider).enabled, false);
     });
@@ -31,10 +31,10 @@ void main() {
       addTearDown(container.dispose);
 
       final notifier = container.read(crosshairModeControllerProvider.notifier);
-      
+
       notifier.setEnabled(true);
       expect(container.read(crosshairModeControllerProvider).enabled, true);
-      
+
       notifier.setEnabled(false);
       expect(container.read(crosshairModeControllerProvider).enabled, false);
     });
@@ -44,12 +44,14 @@ void main() {
       addTearDown(container.dispose);
 
       final notifier = container.read(crosshairModeControllerProvider.notifier);
-      
+
       notifier.setHoveredItemId('test_node');
-      expect(container.read(crosshairModeControllerProvider).hoveredItemId, 'test_node');
-      
+      expect(container.read(crosshairModeControllerProvider).hoveredItemId,
+          'test_node');
+
       notifier.setHoveredItemId(null);
-      expect(container.read(crosshairModeControllerProvider).hoveredItemId, isNull);
+      expect(container.read(crosshairModeControllerProvider).hoveredItemId,
+          isNull);
     });
 
     test('clear() resets state to default', () {
@@ -57,10 +59,10 @@ void main() {
       addTearDown(container.dispose);
 
       final notifier = container.read(crosshairModeControllerProvider.notifier);
-      
+
       notifier.setEnabled(true);
       notifier.setHoveredItemId('node1');
-      
+
       notifier.clear();
       final state = container.read(crosshairModeControllerProvider);
       expect(state.enabled, false);

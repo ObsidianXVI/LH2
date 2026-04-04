@@ -190,8 +190,9 @@ class _LH2HomePageState extends ConsumerState<LH2HomePage> {
               color: LH2Colors.background,
               child: Consumer(
                 builder: (context, ref, child) {
-                  final canvasController = ref.watch(activeCanvasControllerProvider);
-                  
+                  final canvasController =
+                      ref.watch(activeCanvasControllerProvider);
+
                   if (canvasController == null) {
                     // No active tab or not a flow canvas - show placeholder
                     return Center(
@@ -235,7 +236,8 @@ class _LH2HomePageState extends ConsumerState<LH2HomePage> {
                                 child: Padding(
                                   padding: EdgeInsets.all(LH2Theme.spacing(2)),
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text('Small Desktop Demo',
                                           style: LH2Theme.tabLabel),
@@ -253,8 +255,8 @@ class _LH2HomePageState extends ConsumerState<LH2HomePage> {
                                           color: LH2Colors.selectionBlue
                                               .withValues(alpha: 0.1),
                                           child: Padding(
-                                            padding:
-                                                EdgeInsets.all(LH2Theme.spacing(1)),
+                                            padding: EdgeInsets.all(
+                                                LH2Theme.spacing(1)),
                                             child: Text('Mock Crosshair Panel',
                                                 style: LH2Theme.body),
                                           ),
@@ -267,20 +269,22 @@ class _LH2HomePageState extends ConsumerState<LH2HomePage> {
                             ),
 
                           // DI status indicator
-                          _DiStatusWidget(api: api, workspaceRepo: workspaceRepo),
+                          _DiStatusWidget(
+                              api: api, workspaceRepo: workspaceRepo),
                         ],
                       ),
                     );
                   }
-                  
+
                   // Show the appropriate canvas view
                   final controller = canvasController;
                   if (controller is FlowCanvasController) {
                     return FlowCanvasView(controller: controller);
                   } else if (controller is CalendarCanvasController) {
-                    return CalendarCanvasView(controller: (controller as CalendarCanvasController));
+                    return CalendarCanvasView(
+                        controller: (controller as CalendarCanvasController));
                   }
-                  
+
                   return const Center(child: Text('Unsupported canvas kind'));
                 },
               ),

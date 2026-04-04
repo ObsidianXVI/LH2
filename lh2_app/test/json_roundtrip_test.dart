@@ -8,12 +8,14 @@ void main() {
       projectsIds: ['proj1', 'proj2'],
     );
     final json = original.toJson();
-    expect(json, equals({
-      'type': 'projectGroup',
-      'name': 'Test Group',
-      'projectsIds': ['proj1', 'proj2'],
-    }));
-    
+    expect(
+        json,
+        equals({
+          'type': 'projectGroup',
+          'name': 'Test Group',
+          'projectsIds': ['proj1', 'proj2'],
+        }));
+
     final restored = ProjectGroup.fromJson(json);
     expect(restored.name, equals(original.name));
     expect(restored.projectsIds, equals(original.projectsIds));
@@ -29,7 +31,8 @@ void main() {
     final restored = Project.fromJson(json);
     expect(restored.name, equals(original.name));
     expect(restored.deliverablesIds, equals(original.deliverablesIds));
-    expect(restored.nonDeliverableTasksIds, equals(original.nonDeliverableTasksIds));
+    expect(restored.nonDeliverableTasksIds,
+        equals(original.nonDeliverableTasksIds));
   });
 
   test('Deliverable JSON round-trip', () {
@@ -57,7 +60,8 @@ void main() {
     expect(restored.name, equals(original.name));
     expect(restored.sessionsIds, equals(original.sessionsIds));
     expect(restored.taskStatus, equals(original.taskStatus));
-    expect(restored.outboundDependenciesIds, equals(original.outboundDependenciesIds));
+    expect(restored.outboundDependenciesIds,
+        equals(original.outboundDependenciesIds));
   });
 
   test('Session JSON round-trip', () {

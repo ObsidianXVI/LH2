@@ -233,9 +233,10 @@ final workspaceIdProvider = FutureProvider<String>((ref) async {
 
 /// General object provider that fetches an object by its type and ID.
 /// Uses autoDispose to allow proper refresh when cache is invalidated.
-final objectProvider = FutureProvider.autoDispose.family<LH2Object?, (ObjectType, String)>((ref, params) async {
+final objectProvider = FutureProvider.autoDispose
+    .family<LH2Object?, (ObjectType, String)>((ref, params) async {
   final (type, id) = params;
-  
+
   // Listen to cache changes to auto-refresh
   switch (type) {
     case ObjectType.project:
@@ -255,7 +256,7 @@ final objectProvider = FutureProvider.autoDispose.family<LH2Object?, (ObjectType
     case ObjectType.projectGroup:
       ref.watch(projectGroupCacheProvider);
   }
-  
+
   // Now fetch from cache (which will re-fetch from Firestore if invalidated)
   switch (type) {
     case ObjectType.project:

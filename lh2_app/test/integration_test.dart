@@ -68,7 +68,8 @@ void main() {
 
       // Test validation
       expect(controller.isValidLinkTarget('node2'), isTrue);
-      expect(controller.isValidLinkTarget('node1'), isFalse); // can't link to self
+      expect(
+          controller.isValidLinkTarget('node1'), isFalse); // can't link to self
 
       // Create link via operation
       mockRepo.nextTab = const WorkspaceTab(
@@ -127,7 +128,8 @@ void main() {
         },
       );
 
-      final deleteResult = await deleteLinkOp.execute(const CanvasDeleteLinkInput(
+      final deleteResult =
+          await deleteLinkOp.execute(const CanvasDeleteLinkInput(
         workspaceId: 'test-workspace',
         tabId: 'test-tab',
         linkId: 'link1',
@@ -176,8 +178,9 @@ void main() {
 
       // Test validation (this would be used for greying out in UI)
       expect(controller.isValidLinkTarget('node1'), isFalse); // self
-      expect(controller.isValidLinkTarget('node2'), isTrue);  // valid node
-      expect(controller.isValidLinkTarget('widget1'), isFalse); // widget not valid
+      expect(controller.isValidLinkTarget('node2'), isTrue); // valid node
+      expect(
+          controller.isValidLinkTarget('widget1'), isFalse); // widget not valid
 
       controller.cancelLinking();
     });

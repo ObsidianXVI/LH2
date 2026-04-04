@@ -113,7 +113,8 @@ class WorkspaceController extends Notifier<WorkspaceState> {
 
     if (result.ok) {
       final output = result.value!;
-      final activeTabId = output.meta.activeTabId ?? output.tabs.firstOrNull?.tabId;
+      final activeTabId =
+          output.meta.activeTabId ?? output.tabs.firstOrNull?.tabId;
       state = state.copyWith(
         workspaceId: workspaceId,
         meta: output.meta,
@@ -392,7 +393,8 @@ class WorkspaceController extends Notifier<WorkspaceState> {
     // Persist to Firestore
     final repo = ref.read(workspaceRepoProvider);
     try {
-      await repo.updateTab(state.workspaceId, tabId, WorkspaceTabPatch(title: trimmedTitle));
+      await repo.updateTab(
+          state.workspaceId, tabId, WorkspaceTabPatch(title: trimmedTitle));
     } catch (e) {
       // Revert on failure
       final revertedTab = WorkspaceTab(

@@ -29,7 +29,8 @@ void main() {
       expect(fromJson.renderSpec['header']['showTitle'], true);
     });
 
-    testWidgets('NodeRendererRegistry builds default widgets', (WidgetTester tester) async {
+    testWidgets('NodeRendererRegistry builds default widgets',
+        (WidgetTester tester) async {
       final project = Project(
         name: 'Test Project',
         deliverablesIds: [],

@@ -63,7 +63,7 @@ void main() {
         objectType: ObjectType.task,
       );
       notifier.setIsHovered(true);
-      
+
       notifier.close();
       final state = container.read(infoPopupControllerProvider);
       expect(state.isOpen, false);
@@ -77,7 +77,7 @@ void main() {
 
       notifier.setIsHovered(true);
       expect(container.read(infoPopupControllerProvider).isHovered, true);
-      
+
       notifier.setIsHovered(false);
       expect(container.read(infoPopupControllerProvider).isHovered, false);
     });

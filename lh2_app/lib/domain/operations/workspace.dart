@@ -53,7 +53,8 @@ class WorkspaceTabEntry {
 /// Loads workspace metadata and all tabs.
 ///
 /// Operation ID: api.workspace.load
-class WorkspaceLoadOp extends LH2Operation<WorkspaceLoadInput, WorkspaceLoadOutput> {
+class WorkspaceLoadOp
+    extends LH2Operation<WorkspaceLoadInput, WorkspaceLoadOutput> {
   final WorkspaceRepository _repo;
 
   WorkspaceLoadOp(this._repo);
@@ -205,7 +206,8 @@ class WorkspaceSaveOutput {
 /// Saves workspace metadata and/or tabs.
 ///
 /// Operation ID: api.workspace.save
-class WorkspaceSaveOp extends LH2Operation<WorkspaceSaveInput, WorkspaceSaveOutput> {
+class WorkspaceSaveOp
+    extends LH2Operation<WorkspaceSaveInput, WorkspaceSaveOutput> {
   final WorkspaceRepository _repo;
 
   WorkspaceSaveOp(this._repo);
@@ -214,7 +216,8 @@ class WorkspaceSaveOp extends LH2Operation<WorkspaceSaveInput, WorkspaceSaveOutp
   String get operationId => 'api.workspace.save';
 
   @override
-  Future<LH2OpResult<WorkspaceSaveOutput>> execute(WorkspaceSaveInput input) async {
+  Future<LH2OpResult<WorkspaceSaveOutput>> execute(
+      WorkspaceSaveInput input) async {
     try {
       if (input.workspaceId.isEmpty) {
         return LH2OpResult.error(
@@ -239,19 +242,24 @@ class WorkspaceSaveOp extends LH2Operation<WorkspaceSaveInput, WorkspaceSaveOutp
 
       // Save tabs if provided
       if (input.tabs != null) {
-        final currentMeta = await _repo.getWorkspaceMeta(input.workspaceId).catchError((_) => WorkspaceMeta(schemaVersion: 1, ownerUid: 'system', tabOrder: []));
+        final currentMeta = await _repo
+            .getWorkspaceMeta(input.workspaceId)
+            .catchError((_) => WorkspaceMeta(
+                schemaVersion: 1, ownerUid: 'system', tabOrder: []));
         final newTabOrder = List<String>.from(currentMeta.tabOrder);
 
         for (final entry in input.tabs!) {
           if (entry.draft != null) {
             // Create new tab
-            final newId = await _repo.createTab(input.workspaceId, entry.draft!);
+            final newId =
+                await _repo.createTab(input.workspaceId, entry.draft!);
             createdTabIds.add(newId);
             newTabOrder.add(newId);
             tabsSaved++;
           } else if (entry.tabId != null && entry.patch != null) {
             // Update existing tab
-            await _repo.updateTab(input.workspaceId, entry.tabId!, entry.patch!);
+            await _repo.updateTab(
+                input.workspaceId, entry.tabId!, entry.patch!);
             tabsSaved++;
           }
         }

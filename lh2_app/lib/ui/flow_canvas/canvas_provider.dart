@@ -6,23 +6,24 @@ import 'package:lh2_app/domain/notifiers/workspace_controller.dart';
 final activeCanvasControllerProvider = Provider<CanvasController?>((ref) {
   final workspaceState = ref.watch(workspaceControllerProvider);
   final activeTab = workspaceState.activeTab;
-  
+
   if (activeTab == null) return null;
-  
+
   // Create the appropriate CanvasController from the tab's controller data
   final controllerData = activeTab.tab.controller;
   final kind = controllerData['kind'] as String?;
-  
+
   if (kind == 'flow') {
     return FlowCanvasController.fromJson({
       'kind': 'flow',
-      'viewport': controllerData['viewport'] ?? {
-        'panX': 0.0,
-        'panY': 0.0,
-        'zoom': 1.0,
-        'viewportWidthPx': 800.0,
-        'viewportHeightPx': 600.0,
-      },
+      'viewport': controllerData['viewport'] ??
+          {
+            'panX': 0.0,
+            'panY': 0.0,
+            'zoom': 1.0,
+            'viewportWidthPx': 800.0,
+            'viewportHeightPx': 600.0,
+          },
       'gridSizePx': controllerData['gridSizePx'] ?? 24.0,
       'items': activeTab.tab.items,
       'links': activeTab.tab.links,
@@ -31,13 +32,14 @@ final activeCanvasControllerProvider = Provider<CanvasController?>((ref) {
   } else if (kind == 'calendar') {
     return CalendarCanvasController.fromJson({
       'kind': 'calendar',
-      'viewport': controllerData['viewport'] ?? {
-        'panX': 0.0,
-        'panY': 0.0,
-        'zoom': 1.0,
-        'viewportWidthPx': 800.0,
-        'viewportHeightPx': 600.0,
-      },
+      'viewport': controllerData['viewport'] ??
+          {
+            'panX': 0.0,
+            'panY': 0.0,
+            'zoom': 1.0,
+            'viewportWidthPx': 800.0,
+            'viewportHeightPx': 600.0,
+          },
       'anchorStartSgt': controllerData['anchorStartSgt'],
       'minutesPerPixel': controllerData['minutesPerPixel'] ?? 1.0,
       'ruleIntervalMinutes': controllerData['ruleIntervalMinutes'] ?? 60,
@@ -46,6 +48,6 @@ final activeCanvasControllerProvider = Provider<CanvasController?>((ref) {
       'selection': const <String>[],
     });
   }
-  
+
   return null;
 });

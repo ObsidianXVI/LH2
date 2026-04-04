@@ -173,9 +173,7 @@ class WorkspaceRepository {
           );
 
   CollectionReference<JSON> _tabsCol(String workspaceId) =>
-      _workspaceDoc(workspaceId)
-          .collection('tabs')
-          .withConverter<JSON>(
+      _workspaceDoc(workspaceId).collection('tabs').withConverter<JSON>(
             fromFirestore: (snap, _) => snap.data()!,
             toFirestore: (data, _) => data,
           );

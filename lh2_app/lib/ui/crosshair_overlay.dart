@@ -17,11 +17,15 @@ class CrosshairOverlay extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     // Use select to only rebuild on specific state changes, not every cursor movement
-    final enabled = ref.watch(crosshairModeControllerProvider.select((s) => s.enabled));
-    final hoveredItemId = ref.watch(crosshairModeControllerProvider.select((s) => s.hoveredItemId));
-    final lastHoveredItemId = ref.watch(crosshairModeControllerProvider.select((s) => s.lastHoveredItemId));
-    final linkDraft = ref.watch(crosshairModeControllerProvider.select((s) => s.linkDraft));
-    
+    final enabled =
+        ref.watch(crosshairModeControllerProvider.select((s) => s.enabled));
+    final hoveredItemId = ref
+        .watch(crosshairModeControllerProvider.select((s) => s.hoveredItemId));
+    final lastHoveredItemId = ref.watch(
+        crosshairModeControllerProvider.select((s) => s.lastHoveredItemId));
+    final linkDraft =
+        ref.watch(crosshairModeControllerProvider.select((s) => s.linkDraft));
+
     final canvasController = ref.watch(activeCanvasControllerProvider);
 
     if (!enabled) {
@@ -37,11 +41,15 @@ class CrosshairOverlay extends ConsumerWidget {
       child: MouseRegion(
         onEnter: (_) {
           // Use read (not watch) to avoid triggering rebuilds
-          ref.read(crosshairModeControllerProvider.notifier).setPanelHovered(true);
+          ref
+              .read(crosshairModeControllerProvider.notifier)
+              .setPanelHovered(true);
         },
         onExit: (_) {
           // Use read (not watch) to avoid triggering rebuilds
-          ref.read(crosshairModeControllerProvider.notifier).setPanelHovered(false);
+          ref
+              .read(crosshairModeControllerProvider.notifier)
+              .setPanelHovered(false);
         },
         child: Material(
           elevation: 8,
@@ -104,10 +112,8 @@ class CrosshairOverlay extends ConsumerWidget {
                   const SizedBox(height: 16),
                   const Text('Link Draft:',
                       style: TextStyle(fontWeight: FontWeight.bold)),
-                  Text(
-                      'Start: ${linkDraft['startItemId'] ?? 'unknown'}'),
-                  Text(
-                      'Type: ${linkDraft['linkType'] ?? 'default'}'),
+                  Text('Start: ${linkDraft['startItemId'] ?? 'unknown'}'),
+                  Text('Type: ${linkDraft['linkType'] ?? 'default'}'),
                 ],
               ],
             ),

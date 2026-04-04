@@ -118,7 +118,7 @@ class _NodeFormOverlayState extends ConsumerState<NodeFormOverlay> {
 
       // 4) Invalidate the cache for this object so nodes on canvas refresh
       _invalidateObjectCache(ref, widget.object.type, _resolvedObjectId!);
-      
+
       // 5) Also refresh the objectProvider to force a rebuild of NodeCanvasItem
       ref.invalidate(objectProvider((widget.object.type, _resolvedObjectId!)));
 

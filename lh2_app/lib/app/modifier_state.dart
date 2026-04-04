@@ -40,7 +40,8 @@ class ModifierState {
           alt == other.alt;
 
   @override
-  int get hashCode => cmd.hashCode ^ ctrl.hashCode ^ shift.hashCode ^ alt.hashCode;
+  int get hashCode =>
+      cmd.hashCode ^ ctrl.hashCode ^ shift.hashCode ^ alt.hashCode;
 }
 
 class ModifierStateNotifier extends Notifier<ModifierState> {
@@ -49,24 +50,25 @@ class ModifierStateNotifier extends Notifier<ModifierState> {
 
   void handleKeyEvent(KeyEvent event) {
     final bool isPressed = event is KeyDownEvent || event is KeyRepeatEvent;
-    
-    if (event.logicalKey == LogicalKeyboardKey.metaLeft || 
+
+    if (event.logicalKey == LogicalKeyboardKey.metaLeft ||
         event.logicalKey == LogicalKeyboardKey.metaRight) {
       state = state.copyWith(cmd: isPressed);
-    } else if (event.logicalKey == LogicalKeyboardKey.controlLeft || 
-               event.logicalKey == LogicalKeyboardKey.controlRight) {
+    } else if (event.logicalKey == LogicalKeyboardKey.controlLeft ||
+        event.logicalKey == LogicalKeyboardKey.controlRight) {
       state = state.copyWith(ctrl: isPressed);
-    } else if (event.logicalKey == LogicalKeyboardKey.shiftLeft || 
-               event.logicalKey == LogicalKeyboardKey.shiftRight) {
+    } else if (event.logicalKey == LogicalKeyboardKey.shiftLeft ||
+        event.logicalKey == LogicalKeyboardKey.shiftRight) {
       state = state.copyWith(shift: isPressed);
-    } else if (event.logicalKey == LogicalKeyboardKey.altLeft || 
-               event.logicalKey == LogicalKeyboardKey.altRight) {
+    } else if (event.logicalKey == LogicalKeyboardKey.altLeft ||
+        event.logicalKey == LogicalKeyboardKey.altRight) {
       state = state.copyWith(alt: isPressed);
     }
   }
 }
 
-final modifierStateProvider = NotifierProvider<ModifierStateNotifier, ModifierState>(() {
+final modifierStateProvider =
+    NotifierProvider<ModifierStateNotifier, ModifierState>(() {
   return ModifierStateNotifier();
 });
 

@@ -18,7 +18,7 @@ void main() {
 
     // Initially shows loading spinner while Firebase initializes
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
-    
+
     // App builds successfully - Firebase requires emulator to proceed
   });
 }

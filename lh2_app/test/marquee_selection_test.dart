@@ -17,7 +17,8 @@ void main() {
     test('enterMarqueeMode() enables mode', () {
       final container = ProviderContainer();
       addTearDown(container.dispose);
-      final notifier = container.read(marqueeSelectionControllerProvider.notifier);
+      final notifier =
+          container.read(marqueeSelectionControllerProvider.notifier);
 
       notifier.enterMarqueeMode();
       expect(container.read(marqueeSelectionControllerProvider).enabled, true);
@@ -26,7 +27,8 @@ void main() {
     test('dragging updates state correctly', () {
       final container = ProviderContainer();
       addTearDown(container.dispose);
-      final notifier = container.read(marqueeSelectionControllerProvider.notifier);
+      final notifier =
+          container.read(marqueeSelectionControllerProvider.notifier);
 
       notifier.startDragging(const Offset(10, 10));
       var state = container.read(marqueeSelectionControllerProvider);
@@ -48,11 +50,12 @@ void main() {
     test('toggleMarqueeMode() works', () {
       final container = ProviderContainer();
       addTearDown(container.dispose);
-      final notifier = container.read(marqueeSelectionControllerProvider.notifier);
+      final notifier =
+          container.read(marqueeSelectionControllerProvider.notifier);
 
       notifier.toggleMarqueeMode();
       expect(container.read(marqueeSelectionControllerProvider).enabled, true);
-      
+
       notifier.toggleMarqueeMode();
       expect(container.read(marqueeSelectionControllerProvider).enabled, false);
     });

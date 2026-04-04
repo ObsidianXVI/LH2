@@ -1,4 +1,3 @@
-
 import 'dart:async';
 
 import 'package:test/test.dart';
@@ -58,7 +57,8 @@ void main() {
     test('per-call TTL override', () async {
       await cache.get('short', ttl: Duration(milliseconds: 1));
       await Future.delayed(Duration(milliseconds: 5));
-      await cache.get('short'); // refetch short, but default still cached if had
+      await cache
+          .get('short'); // refetch short, but default still cached if had
       expect(fetchCalls, ['short', 'short']);
     });
 

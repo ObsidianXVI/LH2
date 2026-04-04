@@ -28,8 +28,10 @@ class MarqueeSelectionState {
   }) {
     return MarqueeSelectionState(
       enabled: enabled ?? this.enabled,
-      startWorldPoint: clearPoints ? null : (startWorldPoint ?? this.startWorldPoint),
-      currentWorldPoint: clearPoints ? null : (currentWorldPoint ?? this.currentWorldPoint),
+      startWorldPoint:
+          clearPoints ? null : (startWorldPoint ?? this.startWorldPoint),
+      currentWorldPoint:
+          clearPoints ? null : (currentWorldPoint ?? this.currentWorldPoint),
     );
   }
 }
@@ -54,7 +56,8 @@ class MarqueeSelectionController extends Notifier<MarqueeSelectionState> {
   }
 
   void startDragging(Offset worldPoint) {
-    state = state.copyWith(startWorldPoint: worldPoint, currentWorldPoint: worldPoint);
+    state = state.copyWith(
+        startWorldPoint: worldPoint, currentWorldPoint: worldPoint);
   }
 
   void updateDragging(Offset worldPoint) {

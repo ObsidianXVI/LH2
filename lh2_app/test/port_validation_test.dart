@@ -42,8 +42,10 @@ void main() {
 
       // Test valid targets
       expect(controller.isValidLinkTarget('item2'), isTrue); // node is valid
-      expect(controller.isValidLinkTarget('item3'), isFalse); // widget is not valid
-      expect(controller.isValidLinkTarget('item1'), isFalse); // self is not valid
+      expect(controller.isValidLinkTarget('item3'),
+          isFalse); // widget is not valid
+      expect(
+          controller.isValidLinkTarget('item1'), isFalse); // self is not valid
 
       // Cancel linking
       controller.cancelLinking();
@@ -78,7 +80,8 @@ void main() {
 
       // Valid connections
       expect(
-        NodeTemplatePorts.arePortsCompatible(portOutDependency, portInDependency),
+        NodeTemplatePorts.arePortsCompatible(
+            portOutDependency, portInDependency),
         isTrue,
       );
 
@@ -94,7 +97,8 @@ void main() {
       );
 
       expect(
-        NodeTemplatePorts.arePortsCompatible(portInDependency, portOutDependency),
+        NodeTemplatePorts.arePortsCompatible(
+            portInDependency, portOutDependency),
         isFalse, // wrong direction
       );
 
@@ -143,7 +147,8 @@ void main() {
         ],
       };
 
-      final extractedPorts = NodeTemplatePorts.extractPortsFromRenderSpec(renderSpecWithPorts);
+      final extractedPorts =
+          NodeTemplatePorts.extractPortsFromRenderSpec(renderSpecWithPorts);
       expect(extractedPorts.length, equals(2));
       expect(extractedPorts[0].portId, equals('custom-in'));
       expect(extractedPorts[0].direction, equals('in'));
@@ -158,7 +163,8 @@ void main() {
         'icon': 'folder',
       };
 
-      final defaultPorts = NodeTemplatePorts.extractPortsFromRenderSpec(renderSpecWithoutPorts);
+      final defaultPorts =
+          NodeTemplatePorts.extractPortsFromRenderSpec(renderSpecWithoutPorts);
       expect(defaultPorts.length, equals(2));
       expect(defaultPorts[0].portId, equals('port-in'));
       expect(defaultPorts[1].portId, equals('port-out'));

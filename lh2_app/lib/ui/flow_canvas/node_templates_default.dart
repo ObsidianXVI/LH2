@@ -210,7 +210,11 @@ class DefaultNodeTemplates {
             'header': {
               'showTitle': true,
             },
-            'bodyFields': ['focusLevel', 'contiguousMinutesNeeded', 'resourceTags'],
+            'bodyFields': [
+              'focusLevel',
+              'contiguousMinutesNeeded',
+              'resourceTags'
+            ],
             'ports': {
               'in': [
                 {

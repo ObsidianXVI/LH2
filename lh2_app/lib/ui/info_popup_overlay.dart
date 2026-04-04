@@ -18,13 +18,18 @@ class InfoPopupOverlay extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     // Use select to only rebuild when isOpen, anchorScreenRect, mode, itemId, or objectType changes
     // NOT on every hover state change (isHovered)
-    final isOpen = ref.watch(infoPopupControllerProvider.select((s) => s.isOpen));
-    final anchorScreenRect = ref.watch(infoPopupControllerProvider.select((s) => s.anchorScreenRect));
+    final isOpen =
+        ref.watch(infoPopupControllerProvider.select((s) => s.isOpen));
+    final anchorScreenRect = ref
+        .watch(infoPopupControllerProvider.select((s) => s.anchorScreenRect));
     final mode = ref.watch(infoPopupControllerProvider.select((s) => s.mode));
-    final itemId = ref.watch(infoPopupControllerProvider.select((s) => s.itemId));
-    final objectType = ref.watch(infoPopupControllerProvider.select((s) => s.objectType));
-    
-    final crosshairEnabled = ref.watch(crosshairModeControllerProvider.select((s) => s.enabled));
+    final itemId =
+        ref.watch(infoPopupControllerProvider.select((s) => s.itemId));
+    final objectType =
+        ref.watch(infoPopupControllerProvider.select((s) => s.objectType));
+
+    final crosshairEnabled =
+        ref.watch(crosshairModeControllerProvider.select((s) => s.enabled));
 
     // Close info popup when Crosshair Mode is enabled
     if (crosshairEnabled && isOpen) {
@@ -33,7 +38,10 @@ class InfoPopupOverlay extends ConsumerWidget {
       });
     }
 
-    if (!isOpen || anchorScreenRect == null || itemId == null || objectType == null) {
+    if (!isOpen ||
+        anchorScreenRect == null ||
+        itemId == null ||
+        objectType == null) {
       return const SizedBox.shrink();
     }
 
@@ -63,7 +71,9 @@ class InfoPopupOverlay extends ConsumerWidget {
             },
             onExit: (_) {
               // Use read (not watch) to avoid triggering rebuilds
-              ref.read(infoPopupControllerProvider.notifier).setIsHovered(false);
+              ref
+                  .read(infoPopupControllerProvider.notifier)
+                  .setIsHovered(false);
             },
             child: Material(
               elevation: 8,

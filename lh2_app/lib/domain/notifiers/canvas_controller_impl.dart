@@ -873,6 +873,37 @@ class CalendarCanvasController extends CanvasController {
   }
 
   @override
+  Offset worldToScreen(Offset world) {
+    return Offset(
+      (world.dx - viewport.pan.dx) / minutesPerPixel +
+          viewport.viewportSizePx.width / 2,
+      (world.dy - viewport.pan.dy) * viewport.zoom +
+          viewport.viewportSizePx.height / 2,
+    );
+  }
+
+  @override
+  Offset screenToWorld(Offset screen) {
+    return Offset(
+      (screen.dx - viewport.viewportSizePx.width / 2) * minutesPerPixel +
+          viewport.pan.dx,
+      (screen.dy - viewport.viewportSizePx.height / 2) / viewport.zoom +
+          viewport.pan.dy,
+    );
+  }
+
+  @override
+  Rect get viewportWorldRect {
+    final halfWidth = viewport.viewportSizePx.width * minutesPerPixel / 2;
+    final halfHeight = viewport.viewportSizePx.height / (2 * viewport.zoom);
+    return Rect.fromCenter(
+      center: viewport.pan,
+      width: halfWidth * 2,
+      height: halfHeight * 2,
+    );
+  }
+
+  @override
   void panBy(Offset deltaScreen) {
     // Calendar X-axis is time (minutes). Convert pixel delta to minutes using
     // current minutesPerPixel so panning feels consistent across scales.
@@ -890,6 +921,68 @@ class CalendarCanvasController extends CanvasController {
     // Snap increment is 15 minutes.
     const snapIncrement = 15.0;
     return (worldX / snapIncrement).round() * snapIncrement;
+  }
+
+  /// Applies a drag delta to a [CanvasItem] and returns the updated rect + snap
+  /// metadata, following FEATURES.md §2.2.4 and Appendix D.
+  ///
+  /// Rules:
+  /// - Default is freehand (no snap).
+  /// - Holding Cmd enables snap *unless* the item is already in auto-snap mode.
+  /// - Auto-snap mode activates once either end has been snapped at least once.
+  ///   In this mode, snapping is ON by default and holding Cmd DISABLES snap.
+  /// - Snap-to-grid applies to nodes only, and only for snappable types
+  ///   (see [shouldSnap]).
+  ({Rect rect, CanvasItemSnapState snap}) applyMoveWithSnapping({
+    required CanvasItem item,
+    required Offset deltaWorld,
+    required bool isCmdPressed,
+  }) {
+    final Rect proposedRect = item.worldRect.shift(deltaWorld);
+
+    // Widgets never snap.
+    if (!shouldSnap(item)) {
+      return (rect: proposedRect, snap: item.snap);
+    }
+
+    final bool inAutoSnapMode = item.snap.startSnapped || item.snap.endSnapped;
+    final bool shouldSnapNow = inAutoSnapMode ? !isCmdPressed : isCmdPressed;
+
+    if (!shouldSnapNow) {
+      // Freehand move: do not change snap metadata.
+      return (rect: proposedRect, snap: item.snap);
+    }
+
+    // For node movement, we keep duration constant but align the start/end to
+    // the 15-minute ladder.
+    final double snappedLeft = snapWorldX(proposedRect.left);
+    final double snappedRight = snapWorldX(proposedRect.right);
+    final Rect snappedRect = Rect.fromLTRB(
+      snappedLeft,
+      proposedRect.top,
+      snappedRight,
+      proposedRect.bottom,
+    );
+
+    // Mark both ends as having been snapped at least once.
+    // (Future resizing could set these individually.)
+    return (
+      rect: snappedRect,
+      snap: const CanvasItemSnapState(startSnapped: true, endSnapped: true),
+    );
+  }
+
+  /// Returns true if moving/adding a *root-level* deliverable to [proposedRect]
+  /// would overlap any existing canvas item.
+  bool rootDeliverableWouldOverlap({
+    required Rect proposedRect,
+    String? ignoreItemId,
+  }) {
+    for (final other in _items.values) {
+      if (ignoreItemId != null && other.itemId == ignoreItemId) continue;
+      if (other.worldRect.overlaps(proposedRect)) return true;
+    }
+    return false;
   }
 
   bool shouldSnap(CanvasItem item) {

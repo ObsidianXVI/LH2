@@ -3,7 +3,8 @@ import 'package:lh2_app/app/providers.dart';
 import 'package:lh2_app/domain/models/node_template.dart';
 import 'package:lh2_stub/lh2_stub.dart';
 
-final lh2ObjectProvider = FutureProvider.family<LH2Object, String>((ref, objectId) async {
+final lh2ObjectProvider =
+    FutureProvider.family<LH2Object, String>((ref, objectId) async {
   // Try each cache until we find the object
   // In a real app, we'd have a mapping of ID prefix to type, but for now we brute force or assume
   final caches = [
@@ -26,15 +27,19 @@ final lh2ObjectProvider = FutureProvider.family<LH2Object, String>((ref, objectI
   throw Exception('Object not found: $objectId');
 });
 
-final nodeTemplateProvider = FutureProvider.family<NodeTemplate, String>((ref, templateId) async {
+final nodeTemplateProvider =
+    FutureProvider.family<NodeTemplate, String>((ref, templateId) async {
   final workspaceRepo = ref.read(workspaceRepoProvider);
   // This is a simplification, we need workspaceId
   final workspaceId = await ref.watch(workspaceIdProvider.future);
-  
+
   // Brute force search across types for demo/simplicity
   for (final type in ObjectType.values) {
-    final templates = await workspaceRepo.watchNodeTemplates(workspaceId, type).first;
-    final tmpl = templates.cast<NodeTemplate?>().firstWhere((t) => t?.id == templateId, orElse: () => null);
+    final templates =
+        await workspaceRepo.watchNodeTemplates(workspaceId, type).first;
+    final tmpl = templates
+        .cast<NodeTemplate?>()
+        .firstWhere((t) => t?.id == templateId, orElse: () => null);
     if (tmpl != null) return tmpl;
   }
 

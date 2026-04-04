@@ -110,11 +110,13 @@ void main() {
       expect(eventWidget, isA<EventNodeRenderer>());
 
       // Test context requirement renderer
-      final contextWidget = registry.build(contextRequirement, template, testItem);
+      final contextWidget =
+          registry.build(contextRequirement, template, testItem);
       expect(contextWidget, isA<ContextRequirementNodeRenderer>());
 
       // Test actual context renderer
-      final actualContextWidget = registry.build(actualContext, template, testItem);
+      final actualContextWidget =
+          registry.build(actualContext, template, testItem);
       expect(actualContextWidget, isA<ActualContextNodeRenderer>());
     });
 
@@ -147,9 +149,9 @@ void main() {
     });
 
     test('should allow custom renderer registration', () {
-      final customRenderer = (LH2Object object, NodeTemplate template,
-          CanvasItem item,
-          {bool isSelected = false, bool isHighlighted = false}) {
+      final customRenderer =
+          (LH2Object object, NodeTemplate template, CanvasItem item,
+              {bool isSelected = false, bool isHighlighted = false}) {
         return Container(child: Text('Custom Renderer'));
       };
 
@@ -189,7 +191,7 @@ void main() {
         name: 'Test Group',
         projectsIds: ['proj1', 'proj2'],
       );
-      
+
       final template = NodeTemplate(
         schemaVersion: 1,
         id: 'test-template',
@@ -207,7 +209,8 @@ void main() {
       );
 
       // Should not throw and should return some widget (falls back to generic)
-      expect(() => registry.build(projectGroup, template, testItem), returnsNormally);
+      expect(() => registry.build(projectGroup, template, testItem),
+          returnsNormally);
     });
 
     test('should handle disabled items correctly', () {
@@ -248,8 +251,10 @@ void main() {
       );
 
       // Both should render without throwing
-      expect(() => registry.build(project, template, disabledItem), returnsNormally);
-      expect(() => registry.build(project, template, enabledItem), returnsNormally);
+      expect(() => registry.build(project, template, disabledItem),
+          returnsNormally);
+      expect(() => registry.build(project, template, enabledItem),
+          returnsNormally);
     });
   });
 }

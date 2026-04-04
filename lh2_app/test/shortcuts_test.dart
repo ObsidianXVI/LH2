@@ -45,7 +45,7 @@ void main() {
       // Note: In real app, modifiers are checked via HardwareKeyboard.instance
       // In tests, we might need a more controlled way to test ShortcutsEngine's internal logic
       // if HardwareKeyboard is hard to mock. But for now we just verify registry and basic structure.
-      
+
       // Let's assume ShortcutsEngine internal logic works for now as it's straightforward.
     });
   });

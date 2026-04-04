@@ -71,11 +71,13 @@ class _QueryOverlayState extends ConsumerState<QueryOverlay> {
           if (event is KeyDownEvent) {
             if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
               setState(() {
-                _selectedIndex = (_selectedIndex + 1).clamp(-1, queryState.results.length - 1);
+                _selectedIndex = (_selectedIndex + 1)
+                    .clamp(-1, queryState.results.length - 1);
               });
             } else if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
               setState(() {
-                _selectedIndex = (_selectedIndex - 1).clamp(-1, queryState.results.length - 1);
+                _selectedIndex = (_selectedIndex - 1)
+                    .clamp(-1, queryState.results.length - 1);
               });
             } else if (event.logicalKey == LogicalKeyboardKey.enter) {
               _onEnterPressed();
@@ -118,7 +120,9 @@ class _QueryOverlayState extends ConsumerState<QueryOverlay> {
                       Switch(
                         value: queryState.hideResultsInView,
                         onChanged: (val) {
-                          ref.read(queryControllerProvider.notifier).setHideResultsInView(val);
+                          ref
+                              .read(queryControllerProvider.notifier)
+                              .setHideResultsInView(val);
                         },
                         activeColor: LH2Colors.accentBlue,
                         materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -170,15 +174,20 @@ class _QueryOverlayState extends ConsumerState<QueryOverlay> {
                             final result = queryState.results[index];
                             final isSelected = index == _selectedIndex;
                             return Card(
-                              color: isSelected ? LH2Colors.selectionBlue.withOpacity(0.3) : null,
+                              color: isSelected
+                                  ? LH2Colors.selectionBlue.withOpacity(0.3)
+                                  : null,
                               margin: EdgeInsets.symmetric(
                                 horizontal: LH2Theme.spacing(2),
                                 vertical: LH2Theme.spacing(0.5),
                               ),
                               shape: isSelected
                                   ? RoundedRectangleBorder(
-                                      side: BorderSide(color: LH2Colors.selectionBlue, width: 2),
-                                      borderRadius: BorderRadius.circular(LH2Theme.spacing(1)),
+                                      side: BorderSide(
+                                          color: LH2Colors.selectionBlue,
+                                          width: 2),
+                                      borderRadius: BorderRadius.circular(
+                                          LH2Theme.spacing(1)),
                                     )
                                   : null,
                               child: InkWell(

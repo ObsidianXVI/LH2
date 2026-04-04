@@ -1,15 +1,13 @@
-import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:lh2_app/app/theme.dart';
 import 'package:lh2_app/domain/notifiers/canvas_controller_impl.dart';
 import 'package:lh2_app/domain/notifiers/query_controller.dart';
 
 class QueryBoardWidget extends ConsumerStatefulWidget {
   final String itemId;
-  final FlowCanvasController controller;
+  final CanvasController controller;
 
   const QueryBoardWidget({
     super.key,
@@ -31,7 +29,8 @@ class _QueryBoardWidgetState extends ConsumerState<QueryBoardWidget> {
     super.initState();
     final item = widget.controller.items[widget.itemId]!;
     final config = item.config ?? {};
-    _titleController = TextEditingController(text: config['title'] ?? 'Query Board');
+    _titleController =
+        TextEditingController(text: config['title'] ?? 'Query Board');
     _queryController = TextEditingController(text: config['queryText'] ?? '');
   }
 
@@ -71,7 +70,6 @@ class _QueryBoardWidgetState extends ConsumerState<QueryBoardWidget> {
     final item = widget.controller.items[widget.itemId]!;
     final config = item.config ?? {};
     final title = config['title'] as String? ?? 'Query Board';
-    final queryText = config['queryText'] as String? ?? '';
     final hideResults = config['hideResultsInView'] as bool? ?? false;
 
     final queryState = ref.watch(queryControllerProvider);
@@ -114,7 +112,10 @@ class _QueryBoardWidgetState extends ConsumerState<QueryBoardWidget> {
                           },
                           child: Text(
                             title,
-                            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                            style: Theme.of(context)
+                                .textTheme
+                                .headlineSmall
+                                ?.copyWith(
                                   color: Colors.white,
                                 ),
                             textAlign: TextAlign.center,
@@ -178,7 +179,8 @@ class _QueryBoardWidgetState extends ConsumerState<QueryBoardWidget> {
             onPanUpdate: (details) {
               final zoom = widget.controller.viewport.zoom;
               final deltaHeight = details.delta.dy / zoom;
-              final newHeight = math.max(100.0, item.worldRect.height + deltaHeight);
+              final newHeight =
+                  math.max(100.0, item.worldRect.height + deltaHeight);
               final newRect = Rect.fromLTWH(
                 item.worldRect.left,
                 item.worldRect.top,

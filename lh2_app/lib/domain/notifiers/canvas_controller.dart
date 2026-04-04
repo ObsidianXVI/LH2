@@ -25,13 +25,15 @@ class CanvasController {
     if (activeTab == null) return Rect.zero;
 
     final controllerData = activeTab.tab.controller;
-    final viewportData = controllerData['viewport'] as Map<String, Object?>? ?? const <String, Object?>{};
+    final viewportData = controllerData['viewport'] as Map<String, Object?>? ??
+        const <String, Object?>{};
     final panX = (viewportData['panX'] as num?)?.toDouble() ?? 0.0;
     final panY = (viewportData['panY'] as num?)?.toDouble() ?? 0.0;
     final zoom = (viewportData['zoom'] as num?)?.toDouble() ?? 1.0;
 
     const canvasPxSize = Size(800, 600);
-    final worldSize = Size(canvasPxSize.width / zoom, canvasPxSize.height / zoom);
+    final worldSize =
+        Size(canvasPxSize.width / zoom, canvasPxSize.height / zoom);
     return Rect.fromLTWH(panX, panY, worldSize.width, worldSize.height);
   }
 }

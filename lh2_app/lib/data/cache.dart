@@ -14,8 +14,7 @@ class _CacheEntry<T> {
   _CacheEntry(this.value, {Duration? ttl})
       : expiresAt = ttl != null ? DateTime.now().add(ttl) : null;
 
-  bool get isExpired =>
-      expiresAt != null && DateTime.now().isAfter(expiresAt!);
+  bool get isExpired => expiresAt != null && DateTime.now().isAfter(expiresAt!);
 }
 
 /// Type-safe in-memory cache for objects of type [T], keyed by [String] id.
@@ -102,8 +101,7 @@ class GenericCache<T> {
   void initFromMap(Map<String, T> items, {bool force = false}) {
     if (_hasInitAll && !force) return;
     for (final entry in items.entries) {
-      _registry[entry.key] =
-          _CacheEntry(entry.value, ttl: defaultTtl);
+      _registry[entry.key] = _CacheEntry(entry.value, ttl: defaultTtl);
     }
     _hasInitAll = true;
   }

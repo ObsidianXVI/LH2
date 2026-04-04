@@ -136,28 +136,28 @@ abstract class LH2Operation<In, Out> {
   ///
   /// Returns an `LH2OpResult` containing either the output value
   /// or an `LH2OpError` with full context.
-  /// 
+  ///
   /// Errors are automatically logged to telemetry.
   Future<LH2OpResult<Out>> run(In input) async {
     final result = await execute(input);
-    
+
     // Log any errors to telemetry
     final error = result.error;
     if (error != null) {
       Telemetry.error(error);
     }
-    
+
     return result;
   }
 
   /// The actual operation implementation.
-  /// 
+  ///
   /// Subclasses must implement this method instead of [run].
   /// The [run] method wraps this to add telemetry logging.
   Future<LH2OpResult<Out>> execute(In input);
 
   /// Captures the current code location from stack trace.
-  /// 
+  ///
   /// Uses [captureLocation] helper for consistent formatting.
   String? _captureLocation() {
     try {

@@ -27,12 +27,14 @@ class TemplateConverter {
   }
 
   /// Converts a list of domain NodeTemplates to repository NodeTemplates
-  static List<repo.NodeTemplate> toRepositoryList(List<domain.NodeTemplate> domainTemplates) {
+  static List<repo.NodeTemplate> toRepositoryList(
+      List<domain.NodeTemplate> domainTemplates) {
     return domainTemplates.map(toRepository).toList();
   }
 
   /// Converts a list of repository NodeTemplates to domain NodeTemplates
-  static List<domain.NodeTemplate> toDomainList(List<repo.NodeTemplate> repoTemplates) {
+  static List<domain.NodeTemplate> toDomainList(
+      List<repo.NodeTemplate> repoTemplates) {
     return repoTemplates.map(toDomain).toList();
   }
 }

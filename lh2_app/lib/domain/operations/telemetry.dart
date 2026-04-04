@@ -79,7 +79,8 @@ class Telemetry {
       'message': message,
       'operationId': operationId,
       'payload': payload,
-      if (stackTrace != null) 'location': captureLocation(stackTrace, maxFrames: maxFrames),
+      if (stackTrace != null)
+        'location': captureLocation(stackTrace, maxFrames: maxFrames),
     };
 
     _log(logEntry);
@@ -245,7 +246,8 @@ String? _parseFrame(String frame) {
   if (fileMatch != null) {
     final filePath = fileMatch.group(1);
     // Try to extract method name from the frame
-    final methodPattern = RegExp(r'([a-zA-Z_][a-zA-Z0-9_]*(?:\.[a-zA-Z_][a-zA-Z0-9_]*)?)\s*\(');
+    final methodPattern =
+        RegExp(r'([a-zA-Z_][a-zA-Z0-9_]*(?:\.[a-zA-Z_][a-zA-Z0-9_]*)?)\s*\(');
     final methodMatch = methodPattern.firstMatch(frame);
     final methodName = methodMatch?.group(1);
 
