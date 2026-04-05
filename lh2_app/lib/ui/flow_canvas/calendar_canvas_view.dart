@@ -630,9 +630,10 @@ class _CalendarCanvasViewState extends ConsumerState<CalendarCanvasView> {
                   ? SystemMouseCursors.precise
                   : SystemMouseCursors.basic,
               onHover: _handleHover,
-              child: Stack(
-                children: [
-                  // 1) Timescale overlay (CustomPaint) - Lowest layer
+              child: ClipRect(
+                child: Stack(
+                  children: [
+                    // 1) Timescale overlay (CustomPaint) - Lowest layer
                   CustomPaint(
                     painter: CalendarTimescalePainter(
                       pan: widget.controller.viewport.pan,
@@ -670,6 +671,7 @@ class _CalendarCanvasViewState extends ConsumerState<CalendarCanvasView> {
                 ],
               ),
             ),
+          ),
           ),
         );
       }),

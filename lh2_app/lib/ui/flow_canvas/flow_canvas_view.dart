@@ -181,9 +181,10 @@ class _FlowCanvasViewState extends ConsumerState<FlowCanvasView> {
                     ? SystemMouseCursors.precise
                     : SystemMouseCursors.basic,
                 onHover: _handleHover,
-                child: Stack(
-                  children: [
-                    // Grid background
+                child: ClipRect(
+                  child: Stack(
+                    children: [
+                      // Grid background
                     CustomPaint(
                       painter: GridBackgroundPainter(
                         pan: widget.controller.viewport.pan,
@@ -232,6 +233,7 @@ class _FlowCanvasViewState extends ConsumerState<FlowCanvasView> {
                   ],
                 ),
               ),
+            ),
             ),
           );
         },
