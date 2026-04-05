@@ -505,7 +505,9 @@ abstract class CanvasController extends ChangeNotifier {
       itemType: item.itemType,
       worldRect: item.worldRect,
       objectId: item.objectId,
+      objectType: item.objectType,
       config: newConfig,
+      snap: item.snap,
       disabledByScenario: item.disabledByScenario,
     );
     notifyListeners();
@@ -974,6 +976,87 @@ class CalendarCanvasController extends CanvasController {
     return (
       rect: snappedRect,
       snap: const CanvasItemSnapState(startSnapped: true, endSnapped: true),
+    );
+  }
+
+  /// Applies a resize delta to either the start or end of a [CanvasItem],
+  /// following time-based snapping rules.
+  ({Rect rect, CanvasItemSnapState snap}) applyResizeWithSnapping({
+    required CanvasItem item,
+    required double deltaWorldX,
+    required bool isStart,
+    required bool isCmdPressed,
+  }) {
+    double newLeft = item.worldRect.left;
+    double newRight = item.worldRect.right;
+
+    if (isStart) {
+      newLeft += deltaWorldX;
+      // Prevent negative width (min 1 minute)
+      if (newLeft > newRight - 1.0) newLeft = newRight - 1.0;
+    } else {
+      newRight += deltaWorldX;
+      // Prevent negative width (min 1 minute)
+      if (newRight < newLeft + 1.0) newRight = newLeft + 1.0;
+    }
+
+    final Rect proposedRect = Rect.fromLTRB(
+      newLeft,
+      item.worldRect.top,
+      newRight,
+      item.worldRect.bottom,
+    );
+
+    // Widgets never snap.
+    if (!shouldSnap(item)) {
+      return (rect: proposedRect, snap: item.snap);
+    }
+
+    final bool inAutoSnapMode = item.snap.startSnapped || item.snap.endSnapped;
+    final bool shouldSnapNow = inAutoSnapMode ? !isCmdPressed : isCmdPressed;
+
+    if (!shouldSnapNow) {
+      // Freehand resize: keep existing snap state for the other end,
+      // but the edge being dragged is definitely not "snapped" anymore
+      // in terms of the grid (though we preserve the bit if it was already snapped).
+      return (rect: proposedRect, snap: item.snap);
+    }
+
+    double snappedLeft = newLeft;
+    double snappedRight = newRight;
+    bool newStartSnapped = item.snap.startSnapped;
+    bool newEndSnapped = item.snap.endSnapped;
+
+    if (isStart) {
+      snappedLeft = snapWorldX(newLeft);
+      newStartSnapped = true;
+    } else {
+      snappedRight = snapWorldX(newRight);
+      newEndSnapped = true;
+    }
+
+    // Final safety check to prevent negative width after snapping
+    if (snappedLeft >= snappedRight) {
+      if (isStart) {
+        snappedLeft = snappedRight - 15.0; // Snap to previous 15m step
+      } else {
+        snappedRight = snappedLeft + 15.0; // Snap to next 15m step
+      }
+    }
+
+    final Rect snappedRect = Rect.fromLTRB(
+      snappedLeft,
+      item.worldRect.top,
+      snappedRight,
+      item.worldRect.bottom,
+    );
+
+    return (
+      rect: snappedRect,
+      snap: CanvasItemSnapState(
+        startSnapped: newStartSnapped,
+        endSnapped: newEndSnapped,
+      ),
     );
   }
 

@@ -4,10 +4,20 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:lh2_stub/lh2_stub.dart';
 import 'package:lh2_app/data/firestore_db_interface.dart';
 
+// These tests require Firebase platform channels + a running Firestore emulator.
+// They are disabled by default for `flutter test` runs.
+//
+// To enable:
+//   flutter test --dart-define=RUN_FIREBASE_EMULATOR_TESTS=true test/firestore_db_test.dart
+const bool runEmulatorTests =
+    bool.fromEnvironment('RUN_FIREBASE_EMULATOR_TESTS', defaultValue: false);
+
 void main() {
   late FirestoreDBInterface db;
 
   setUpAll(() async {
+    if (!runEmulatorTests) return;
+
     TestWidgetsFlutterBinding.ensureInitialized();
     await Firebase.initializeApp();
     FirebaseFirestore.instance.useFirestoreEmulator('localhost', 8081);
@@ -20,6 +30,7 @@ void main() {
 
   group('FirestoreDBInterface CRUD integration tests (emulator)', () {
     test('ProjectGroup CRUD', () async {
+      if (!runEmulatorTests) return;
       final original = ProjectGroup(
         name: 'Test PG',
         projectsIds: ['p1', 'p2'],
@@ -44,6 +55,7 @@ void main() {
     });
 
     test('Project CRUD', () async {
+      if (!runEmulatorTests) return;
       final original = Project(
         name: 'Test Project',
         deliverablesIds: ['d1'],
@@ -70,6 +82,7 @@ void main() {
     });
 
     test('Deliverable CRUD', () async {
+      if (!runEmulatorTests) return;
       final original = Deliverable(
         name: 'Test Deliverable',
         tasksIds: ['t1', 't2'],
@@ -96,6 +109,7 @@ void main() {
     });
 
     test('Task CRUD', () async {
+      if (!runEmulatorTests) return;
       final original = Task(
         name: 'Test Task',
         sessionsIds: ['s1'],
@@ -124,6 +138,7 @@ void main() {
     });
 
     test('Session CRUD', () async {
+      if (!runEmulatorTests) return;
       final cr = ContextRequirement(
         focusLevel: 0.8,
         contiguousMinutesNeeded: 60,
@@ -160,6 +175,7 @@ void main() {
     });
 
     test('ContextRequirement CRUD', () async {
+      if (!runEmulatorTests) return;
       final original = ContextRequirement(
         focusLevel: 0.8,
         contiguousMinutesNeeded: 60,
@@ -186,6 +202,7 @@ void main() {
     });
 
     test('Event CRUD', () async {
+      if (!runEmulatorTests) return;
       final ac = ActualContext(
         focusLevel: 0.9,
         contiguousMinutesAvailable: 30,
@@ -230,6 +247,7 @@ void main() {
     });
 
     test('ActualContext CRUD', () async {
+      if (!runEmulatorTests) return;
       final original = ActualContext(
         focusLevel: 0.7,
         contiguousMinutesAvailable: 45,

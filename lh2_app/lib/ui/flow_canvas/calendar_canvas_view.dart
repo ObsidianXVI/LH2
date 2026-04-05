@@ -24,6 +24,7 @@ import 'package:lh2_app/ui/flow_canvas/query_board.dart';
 import 'package:lh2_app/ui/flow_canvas/nodes/node_canvas_item.dart';
 import 'dart:async';
 import 'package:lh2_stub/lh2_stub.dart';
+import 'package:lh2_app/ui/flow_canvas/calendar_node_renderer_registry.dart';
 
 class CalendarCanvasView extends ConsumerStatefulWidget {
   final CalendarCanvasController controller;
@@ -675,6 +676,105 @@ class _CalendarCanvasViewState extends ConsumerState<CalendarCanvasView> {
     );
   }
 
+  Widget _buildResizeHandle({
+    required String itemId,
+    required CanvasItem item,
+    required bool isStart,
+  }) {
+    // Width of the handle hit area
+    const handleHitWidth = 24.0;
+    // Visually thin handle
+    const handleVisualWidth = 4.0;
+    // Offset from the node edge to center the handle visually on the edge
+    const halfPadding = 14.0;
+
+    return Positioned(
+      left: isStart ? halfPadding - (handleHitWidth / 2) : null,
+      right: isStart ? null : halfPadding - (handleHitWidth / 2),
+      top: halfPadding,
+      bottom: halfPadding,
+      child: GestureDetector(
+        onPanStart: (_) {
+          ref.read(infoPopupControllerProvider.notifier).close();
+          _hoverCloseTimer?.cancel();
+          _hoverCloseTimer = null;
+
+          _dragStartRects[itemId] = item.worldRect;
+          _dragCumulativeDeltas[itemId] = Offset.zero;
+        },
+        onPanUpdate: (details) {
+          final startRect = _dragStartRects[itemId];
+          if (startRect == null) return;
+
+          _dragCumulativeDeltas[itemId] =
+              _dragCumulativeDeltas[itemId]! + details.delta;
+          final cumulativeDelta = _dragCumulativeDeltas[itemId]!;
+
+          final deltaWorldX =
+              cumulativeDelta.dx * widget.controller.minutesPerPixel;
+
+          final baseItem = CanvasItem(
+            itemId: item.itemId,
+            itemType: item.itemType,
+            worldRect: startRect,
+            objectId: item.objectId,
+            objectType: item.objectType,
+            config: item.config,
+            snap: item.snap,
+            disabledByScenario: item.disabledByScenario,
+          );
+
+          final result = widget.controller.applyResizeWithSnapping(
+            item: baseItem,
+            deltaWorldX: deltaWorldX,
+            isStart: isStart,
+            isCmdPressed: ref.read(modifierStateProvider).cmd,
+          );
+
+          widget.controller.updateItemRect(
+            itemId,
+            result.rect,
+            snap: result.snap,
+          );
+          setState(() {});
+          _debounceItemPersistence(itemId, result.rect);
+        },
+        onPanEnd: (_) {
+          _dragStartRects.remove(itemId);
+          _dragCumulativeDeltas.remove(itemId);
+        },
+        onPanCancel: () {
+          _dragStartRects.remove(itemId);
+          _dragCumulativeDeltas.remove(itemId);
+        },
+        behavior: HitTestBehavior.opaque,
+        child: MouseRegion(
+          cursor: SystemMouseCursors.resizeLeftRight,
+          child: SizedBox(
+            width: handleHitWidth,
+            child: Center(
+              child: Container(
+                width: handleVisualWidth,
+                height: 20, // Short vertical bar in the middle
+                decoration: BoxDecoration(
+                  color: LH2Colors.selectionBlue,
+                  borderRadius: BorderRadius.circular(2),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.2),
+                      blurRadius: 2,
+                      offset: const Offset(0, 1),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   void _handleHover(PointerHoverEvent event) {
     final worldPos = widget.controller.screenToWorld(event.localPosition);
     String? hitItemId;
@@ -782,8 +882,8 @@ class _CalendarCanvasViewState extends ConsumerState<CalendarCanvasView> {
     if (item.itemType == 'queryBoard') {
       content = QueryBoardWidget(itemId: itemId, controller: widget.controller);
     } else if (item.itemType == 'node') {
-      // Use the Flow canvas node renderer for full styling parity.
-      content = NodeCanvasItem(
+      // Calendar canvas uses its own renderer variants.
+      content = CalendarNodeCanvasItem(
         itemId: itemId,
         item: item,
         isSelected: isSelected,
@@ -911,8 +1011,13 @@ class _CalendarCanvasViewState extends ConsumerState<CalendarCanvasView> {
                       : _defaultItemFrame(isSelected, content),
                 ),
               ),
-              if (item.itemType == 'node')
+              if (item.itemType == 'node') ...[
                 ..._buildItemPorts(itemId, item, screenRect, isLinking),
+                if (isSelected && !isLinking) ...[
+                  _buildResizeHandle(itemId: itemId, item: item, isStart: true),
+                  _buildResizeHandle(itemId: itemId, item: item, isStart: false),
+                ],
+              ],
             ],
           ),
         ),

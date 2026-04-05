@@ -12,15 +12,12 @@ Your job is to implement without breaking existing functionality, the specified 
 
 ##### 2.2.4: Free Drawing and Snap-To-Grid
 
-First of all, allow node and widget addition/manipulation in the same way the Flow Canvas does.
-The following features will be added on after this.
-
 ###### Task 2.2.4-1: Snap toggle + auto-snap rules (Appendix D) [L4]
 
 ```text
 Prompt (L4):
 
-Implement freehand vs snap-to-grid per FEATURES.md §2.2.4 and Appendix D.
+Implement freehand vs snap-to-grid for certain node types per FEATURES.md §2.2.4 and Appendix D.
 
 Rules:
 - Default: freehand; moving a node does NOT update its timestamps.
@@ -70,7 +67,7 @@ Implement Calendar Canvas node styling per FEATURES.md §2.2.6.
 
 Deliverable:
 - special placing of out-ports
-- can be nested within context-requirement nodes
+- can be nested within context-requirement nodes (highlight the parent context-requirement node in blue outline if being nested)
 - root-level deliverables (global deliverables) must not overlap with any other nodes
 
 Session:

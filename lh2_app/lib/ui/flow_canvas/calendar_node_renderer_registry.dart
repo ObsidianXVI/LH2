@@ -325,3 +325,144 @@ class CalendarNodeRendererRegistry {
 }
 
 final calendarNodeRendererRegistry = CalendarNodeRendererRegistry();
+
+/// Calendar canvas version of [NodeCanvasItem].
+///
+/// Uses [calendarNodeRendererRegistry] (instead of the Flow renderer registry)
+/// to render calendar-specific variants.
+class CalendarNodeCanvasItem extends StatelessWidget {
+  final String itemId;
+  final CanvasItem item;
+  final bool isSelected;
+  final bool isHighlighted;
+
+  const CalendarNodeCanvasItem({
+    super.key,
+    required this.itemId,
+    required this.item,
+    this.isSelected = false,
+    this.isHighlighted = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final objectTypeStr = item.objectType;
+    if (objectTypeStr == null) {
+      return _error('Missing object type');
+    }
+
+    ObjectType objectType;
+    try {
+      objectType = ObjectType.values.byName(objectTypeStr);
+    } catch (_) {
+      return _error('Unknown object type: $objectTypeStr');
+    }
+
+    // Calendar nodes currently use default templates.
+    // This keeps the widget tree stable while we evolve template storage.
+    final template = _findDefaultTemplate(objectType);
+
+    // If we don't have an objectId yet (new node), show a placeholder.
+    // We currently always show placeholder objects here; real data wiring will
+    // come via Riverpod providers once calendar backend mapping is introduced.
+    final LH2Object object = _createPlaceholderObject(objectType);
+
+    // NOTE: We intentionally do not fetch Firestore objects here.
+    // Calendar nodes are currently demo/styling-focused.
+    return calendarNodeRendererRegistry.build(
+      object,
+      template,
+      item,
+      isSelected: isSelected,
+      isHighlighted: isHighlighted,
+    );
+  }
+
+  NodeTemplate _findDefaultTemplate(ObjectType objectType) {
+    // Importing DefaultNodeTemplates here would couple this file to flow_canvas;
+    // instead, use a minimal empty template and rely on the renderer styles.
+    return NodeTemplate(
+      id: 'calendar-default-${objectType.name}',
+      objectType: objectType,
+      name: 'Calendar Default',
+      schemaVersion: 1,
+      renderSpec: const {},
+    );
+  }
+
+  LH2Object _createPlaceholderObject(ObjectType type) {
+    switch (type) {
+      case ObjectType.deliverable:
+        return Deliverable(
+          name: 'Deliverable',
+          tasksIds: const [],
+          deadlineTs: DateTime.now().millisecondsSinceEpoch,
+        );
+      case ObjectType.session:
+        return Session(
+          description: 'Session',
+          scheduledTs: DateTime.now().millisecondsSinceEpoch,
+          contextRequirement: const ContextRequirement(
+            focusLevel: 0.5,
+            contiguousMinutesNeeded: 30,
+            resourceTags: {},
+          ),
+        );
+      case ObjectType.contextRequirement:
+        return const ContextRequirement(
+          focusLevel: 0.5,
+          contiguousMinutesNeeded: 30,
+          resourceTags: {},
+        );
+      case ObjectType.event:
+        return Event(
+          name: 'Event',
+          description: '',
+          calendar: 'default',
+          startTs: DateTime.now().millisecondsSinceEpoch,
+          endTs: DateTime.now().millisecondsSinceEpoch + 3600000,
+          allDay: false,
+          actualContext: const ActualContext(
+            focusLevel: 0.5,
+            contiguousMinutesAvailable: 60,
+            resourceTags: {},
+          ),
+        );
+      // Non-calendar types fall back to generic.
+      case ObjectType.project:
+        return const Project(
+          name: 'Project',
+          deliverablesIds: [],
+          nonDeliverableTasksIds: [],
+        );
+      case ObjectType.task:
+        return const Task(
+          name: 'Task',
+          sessionsIds: [],
+          taskStatus: TaskStatus.draft,
+          outboundDependenciesIds: [],
+        );
+      case ObjectType.actualContext:
+        return const ActualContext(
+          focusLevel: 0.5,
+          contiguousMinutesAvailable: 60,
+          resourceTags: {},
+        );
+      case ObjectType.projectGroup:
+        return const ProjectGroup(name: 'Group', projectsIds: []);
+    }
+  }
+
+  Widget _error(String message) {
+    return Container(
+      padding: const EdgeInsets.all(8),
+      color: Colors.red.withOpacity(0.1),
+      child: Center(
+        child: Text(
+          message,
+          style: const TextStyle(color: Colors.red, fontSize: 10),
+        ),
+      ),
+    );
+  }
+}

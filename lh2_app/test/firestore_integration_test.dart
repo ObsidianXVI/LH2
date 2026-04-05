@@ -15,6 +15,19 @@ void main() {
   late FirestoreDBInterface db;
 
   setUpAll(() async {
+    // These tests require Firebase platform channels + a running Firestore
+    // emulator. In pure `flutter test` (VM) environments, the Firebase method
+    // channels are not available, so we skip by default.
+    //
+    // Run manually when needed:
+    //   flutter test test/firestore_integration_test.dart -t emulator
+    // (and ensure the emulator is running on localhost:8081)
+
+    // ignore: avoid_print
+    print(
+        '[firestore_integration_test] Skipped by default (requires emulator + channels)');
+    return;
+
     TestWidgetsFlutterBinding.ensureInitialized();
     await Firebase.initializeApp();
 
